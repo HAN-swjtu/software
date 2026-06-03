@@ -1,0 +1,29 @@
+.idea/
+
+# Node dependencies
+node_modules/
+server/node_modules/
+
+# Logs
+*.log
+*.err.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local runtime files
+.env
+.env.*
+!.env.example
+
+# OS/editor artifacts
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Test/runtime output that can be regenerated
+coverage/
+server/coverage/
+target/
+**/target/
+课程设计-系统功能测试/tools/

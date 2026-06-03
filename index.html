@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>员工管理系统 - 主界面</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="main-page">
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">&#128100;</span>
+      <span class="topbar-title">员工管理系统</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="currentUser"></span>
+      <button class="logout-btn" id="logoutBtn">退出登录</button>
+    </div>
+  </header>
+  <div class="main-layout">
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-panel="dashboard"><span class="nav-icon">&#128202;</span><span>控制台</span></div>
+        <div class="nav-item" data-panel="employees"><span class="nav-icon">&#128101;</span><span>员工列表</span></div>
+        <div class="nav-item" data-panel="departments"><span class="nav-icon">&#127970;</span><span>部门管理</span></div>
+        <div class="nav-item" data-panel="attendance"><span class="nav-icon">&#128197;</span><span>考勤管理</span></div>
+        <div class="nav-item" data-panel="salary"><span class="nav-icon">&#128176;</span><span>薪资管理</span></div>
+        <div class="nav-item" data-panel="leave"><span class="nav-icon">&#127796;</span><span>假期管理</span></div>
+        <div class="nav-item" data-panel="resign"><span class="nav-icon">&#128682;</span><span>离职管理</span></div>
+        <div class="nav-item" data-panel="training"><span class="nav-icon">&#128218;</span><span>培训管理</span></div>
+        <div class="nav-item" data-panel="recruit"><span class="nav-icon">&#128269;</span><span>招聘管理</span></div>
+        <div class="nav-item" data-panel="mine"><span class="nav-icon">&#128100;</span><span>我的</span></div>
+        <div class="nav-item" data-panel="settings"><span class="nav-icon">&#9881;</span><span>系统设置</span></div>
+      </nav>
+    </aside>
+    <main class="content-area">
+      <div class="panel active" id="panel-dashboard">
+        <h2 class="panel-title">控制台</h2>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon">&#128101;</div><div class="stat-info"><div class="stat-num">128</div><div class="stat-label">员工总数</div></div></div>
+          <div class="stat-card"><div class="stat-icon">&#127970;</div><div class="stat-info"><div class="stat-num">12</div><div class="stat-label">部门数量</div></div></div>
+          <div class="stat-card"><div class="stat-icon">&#9989;</div><div class="stat-info"><div class="stat-num">115</div><div class="stat-label">今日出勤</div></div></div>
+          <div class="stat-card"><div class="stat-icon">&#127381;</div><div class="stat-info"><div class="stat-num">5</div><div class="stat-label">本月新增</div></div></div>
+          <div class="stat-card"><div class="stat-icon">&#127796;</div><div class="stat-info"><div class="stat-num">5</div><div class="stat-label">待审假期</div></div></div>
+          <div class="stat-card"><div class="stat-icon">&#128269;</div><div class="stat-info"><div class="stat-num">7</div><div class="stat-label">招聘职位</div></div></div>
+        </div>
+        <div class="welcome-box"><h3>欢迎使用员工管理系统</h3><p>您可以通过左侧菜单导航到各功能模块，管理员工信息、部门、考勤、薪资、假期、离职、培训及招聘等。</p></div>
+      </div>
+      <div class="panel" id="panel-employees">
+        <h2 class="panel-title">员工列表</h2>
+        <div class="panel-toolbar em-toolbar">
+          <input type="text" class="search-input" id="empListSearch" placeholder="搜索员工姓名/工号..." />
+          <select class="search-input" id="empFilterDept" style="max-width:140px"><option value="">全部部门</option></select>
+          <select class="search-input" id="empFilterRole" style="max-width:130px"><option value="">全部角色</option></select>
+          <select class="search-input" id="empFilterStatus" style="max-width:120px">
+            <option value="">全部状态</option><option value="在职">在职</option><option value="试用期">试用期</option><option value="已离职">已离职</option>
+          </select>
+          <input type="date" class="search-input" id="empFilterFrom" title="入职起" style="max-width:150px" />
+          <input type="date" class="search-input" id="empFilterTo" title="入职止" style="max-width:150px" />
+          <button class="action-btn" id="empFilterBtn">筛选</button>
+          <button class="action-btn" id="empExportBtn" style="display:none">导出 Excel</button>
+          <button class="action-btn primary" id="empAddBtn" style="display:none" onclick="openRegisterModal()">+ 新增员工</button>
+        </div>
+        <div id="empReportInfo" class="reg-result" style="margin-bottom:10px"></div>
+        <table class="data-table"><thead><tr>
+          <th>工号</th><th>姓名</th><th>部门</th><th>角色</th><th>状态</th><th>入职日期</th><th id="empActionCol" style="display:none">操作</th>
+        </tr></thead><tbody id="empListBody"><tr><td colspan="7" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+      </div>
+      <div class="panel" id="panel-departments">
+        <h2 class="panel-title">部门管理</h2>
+        <div class="panel-toolbar em-toolbar">
+          <select class="search-input" id="deptSelect" style="max-width:150px;display:none"><option value="">选择部门</option></select>
+          <input type="text" class="search-input" id="deptEmpSearch" placeholder="搜索员工姓名/工号..." />
+          <button class="action-btn" id="deptEmpQueryBtn">查询部门员工</button>
+          <button class="action-btn" id="deptRefreshBtn">刷新统计</button>
+          <button class="action-btn" id="deptExportStatsBtn" style="display:none">导出部门报表</button>
+          <button class="action-btn" id="deptExportEmpBtn">导出员工名单</button>
+          <button class="action-btn primary" id="deptAddBtn" style="display:none">+ 新增部门</button>
+        </div>
+        <div id="deptPanelTip" class="reg-result" style="margin-bottom:8px"></div>
+        <table class="data-table" style="margin-bottom:20px"><thead><tr>
+          <th>部门编号</th><th>部门名称</th><th>负责人</th><th>在职</th><th>试用期</th><th>离职</th><th>总人数</th><th>操作</th>
+        </tr></thead><tbody id="deptStatsBody"><tr><td colspan="8" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        <div id="deptEmpResult"></div>
+      </div>
+      <div class="panel" id="panel-attendance">
+        <h2 class="panel-title">考勤管理</h2>
+        <div class="att-punch-card" id="attPunchCard">
+          <div class="att-punch-title">今日打卡</div>
+          <div id="attTodayInfo" class="att-today-info">加载中...</div>
+          <div class="att-punch-btns">
+            <button class="action-btn primary" id="attCheckInBtn">签到</button>
+            <button class="action-btn" id="attCheckOutBtn">签退</button>
+          </div>
+          <div id="attPunchMsg" class="reg-result" style="margin-top:8px"></div>
+        </div>
+        <div class="module-stats" id="attStatsRow" style="display:none">
+          <div class="module-stat-item"><span class="mstat-icon">&#9989;</span><div class="mstat-info"><div class="mstat-num" id="attStatNormal">0</div><div class="mstat-label">正常</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#9200;</span><div class="mstat-info"><div class="mstat-num" id="attStatLate">0</div><div class="mstat-label">迟到</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#128682;</span><div class="mstat-info"><div class="mstat-num" id="attStatEarly">0</div><div class="mstat-label">早退</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#10060;</span><div class="mstat-info"><div class="mstat-num" id="attStatAbsent">0</div><div class="mstat-label">缺勤</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#127796;</span><div class="mstat-info"><div class="mstat-num" id="attStatLeave">0</div><div class="mstat-label">请假</div></div></div>
+        </div>
+        <div class="panel-toolbar em-toolbar" style="margin-top:16px">
+          <select class="search-input" id="attFilterDept" style="max-width:140px;display:none"><option value="">全部部门</option></select>
+          <select class="search-input" id="attFilterStatus" style="max-width:120px"><option value="">全部状态</option><option value="正常">正常</option><option value="迟到">迟到</option><option value="早退">早退</option><option value="缺勤">缺勤</option><option value="请假">请假</option></select>
+          <input type="date" class="search-input" id="attDateFrom" style="max-width:150px" />
+          <input type="date" class="search-input" id="attDateTo" style="max-width:150px" />
+          <input type="text" class="search-input" id="attKeyword" placeholder="搜索姓名/工号..." />
+          <button class="action-btn" id="attQueryBtn">查询</button>
+          <button class="action-btn" id="attExportBtn" style="display:none">导出考勤</button>
+          <button class="action-btn" id="attSyncLeaveBtn" style="display:none" title="将已批准请假写入考勤并覆盖同日期迟到">同步假期到考勤</button>
+          <button class="action-btn primary" id="attAddBtn" style="display:none">+ 补录考勤</button>
+        </div>
+        <div id="attPanelTip" class="reg-result" style="margin-bottom:8px"></div>
+        <table class="data-table"><thead><tr>
+          <th>工号</th><th>姓名</th><th>部门</th><th>日期</th><th>状态</th><th>签到</th><th>签退</th><th>备注</th><th id="attActionCol" style="display:none">操作</th>
+        </tr></thead><tbody id="attListBody"><tr><td colspan="9" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+      </div>
+      <div class="panel" id="panel-salary">
+        <h2 class="panel-title">薪资管理</h2>
+        <div class="att-punch-card" id="salMyCard">
+          <div class="att-punch-title">我的薪资结构</div>
+          <div id="salMyStruct" class="att-today-info">加载中...</div>
+        </div>
+        <div class="module-stats" id="salStatsRow" style="display:none">
+          <div class="module-stat-item"><span class="mstat-icon">&#128101;</span><div class="mstat-info"><div class="mstat-num" id="salStatCount">0</div><div class="mstat-label">工资单数</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#128176;</span><div class="mstat-info"><div class="mstat-num" id="salStatGross">0</div><div class="mstat-label">应发合计</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#128179;</span><div class="mstat-info"><div class="mstat-num" id="salStatNet">0</div><div class="mstat-label">实发合计</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#128200;</span><div class="mstat-info"><div class="mstat-num" id="salStatDeduct">0</div><div class="mstat-label">考勤扣款</div></div></div>
+        </div>
+        <div class="panel-toolbar em-toolbar" style="margin-top:16px">
+          <input type="month" class="search-input" id="salFilterMonth" style="max-width:160px" />
+          <select class="search-input" id="salFilterStatus" style="max-width:120px"><option value="">全部状态</option><option value="草稿">草稿</option><option value="已发放">已发放</option></select>
+          <select class="search-input" id="salFilterDept" style="max-width:140px;display:none"><option value="">全部部门</option></select>
+          <input type="text" class="search-input" id="salKeyword" placeholder="搜索姓名/工号/单号..." />
+          <button class="action-btn" id="salQueryBtn">查询</button>
+          <button class="action-btn" id="salExportBtn" style="display:none">导出工资</button>
+          <button class="action-btn" id="salStructBtn" style="display:none">薪资结构</button>
+          <button class="action-btn" id="salGenerateBtn" style="display:none">核算工资</button>
+          <button class="action-btn primary" id="salPublishBtn" style="display:none">批量发放</button>
+        </div>
+        <div id="salPanelTip" class="reg-result" style="margin-bottom:8px"></div>
+        <table class="data-table"><thead><tr>
+          <th>工资单号</th><th>工号</th><th>姓名</th><th>部门</th><th>月份</th><th>应发</th><th>实发</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody id="salListBody"><tr><td colspan="9" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+      </div>
+      <div class="panel" id="panel-leave">
+        <h2 class="panel-title">假期管理</h2>
+        <div class="att-punch-card" id="lvMyCard">
+          <div class="att-punch-title">我的假期</div>
+          <div id="lvMySummary" class="att-today-info">加载中...</div>
+        </div>
+        <div class="module-stats">
+          <div class="module-stat-item"><span class="mstat-icon">&#127796;</span><div class="mstat-info"><div class="mstat-num" id="lvStatMonth">0</div><div class="mstat-label">本月申请</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#9989;</span><div class="mstat-info"><div class="mstat-num" id="lvStatApproved">0</div><div class="mstat-label">已批准</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#9203;</span><div class="mstat-info"><div class="mstat-num" id="lvStatPending">0</div><div class="mstat-label">待审批</div></div></div>
+        </div>
+        <div class="panel-toolbar em-toolbar" style="margin-top:16px">
+          <select class="search-input" id="lvFilterType" style="max-width:110px"><option value="">全部类型</option><option value="年假">年假</option><option value="病假">病假</option><option value="事假">事假</option><option value="婚假">婚假</option><option value="产假">产假</option><option value="丧假">丧假</option><option value="调休">调休</option></select>
+          <select class="search-input" id="lvFilterStatus" style="max-width:110px"><option value="">全部状态</option><option value="待审批">待审批</option><option value="已批准">已批准</option><option value="已拒绝">已拒绝</option></select>
+          <select class="search-input" id="lvFilterDept" style="max-width:130px;display:none"><option value="">全部部门</option></select>
+          <input type="date" class="search-input" id="lvDateFrom" style="max-width:145px" />
+          <input type="date" class="search-input" id="lvDateTo" style="max-width:145px" />
+          <input type="text" class="search-input" id="lvKeyword" placeholder="搜索姓名/工号/单号..." />
+          <button class="action-btn" id="lvQueryBtn">查询</button>
+          <button class="action-btn" id="lvPendingBtn" style="display:none">待我审批</button>
+          <button class="action-btn" id="lvExportBtn" style="display:none">导出</button>
+          <button class="action-btn primary" id="lvAddBtn">+ 请假申请</button>
+        </div>
+        <div id="lvPanelTip" class="reg-result" style="margin-bottom:8px"></div>
+        <table class="data-table"><thead><tr>
+          <th>申请编号</th><th>姓名</th><th>工号</th><th>假期类型</th><th>开始日期</th><th>结束日期</th><th>天数</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody id="lvListBody"><tr><td colspan="9" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+      </div>
+      <div class="panel" id="panel-resign">
+        <h2 class="panel-title">离职管理</h2>
+        <div class="module-stats" id="resignStats">
+          <div class="module-stat-item"><span class="mstat-icon">&#128221;</span><div class="mstat-info"><div class="mstat-num" id="rsStatMonth">0</div><div class="mstat-label">本月申请</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#9203;</span><div class="mstat-info"><div class="mstat-num" id="rsStatPendingMgr">0</div><div class="mstat-label">待主管审批</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#128203;</span><div class="mstat-info"><div class="mstat-num" id="rsStatPendingHr">0</div><div class="mstat-label">待HR审批</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#128682;</span><div class="mstat-info"><div class="mstat-num" id="rsStatArchive">0</div><div class="mstat-label">离职归档</div></div></div>
+        </div>
+        <div class="panel-toolbar" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+          <button type="button" class="action-btn primary active" id="rsViewApply">离职申请</button>
+          <button type="button" class="action-btn" id="rsViewArch">离职归档</button>
+        </div>
+        <div id="rsApplySection">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <select class="search-input" id="rsFilterStatus" style="max-width:130px"><option value="">全部状态</option><option value="待主管审批">待主管审批</option><option value="待HR审批">待HR审批</option><option value="已批准">已批准</option><option value="已拒绝">已拒绝</option></select>
+            <select class="search-input" id="rsFilterDept" style="max-width:130px;display:none"><option value="">全部部门</option></select>
+            <input type="date" class="search-input" id="rsDateFrom" style="max-width:145px" />
+            <input type="date" class="search-input" id="rsDateTo" style="max-width:145px" />
+            <input type="text" class="search-input" id="rsKeyword" placeholder="搜索姓名/工号/单号..." />
+            <button class="action-btn" id="rsQueryBtn">查询</button>
+            <button class="action-btn" id="rsPendingMgrBtn" style="display:none">待主管审批</button>
+            <button class="action-btn" id="rsPendingHrBtn" style="display:none">待HR审批</button>
+            <button class="action-btn" id="rsExportBtn" style="display:none">导出申请</button>
+            <button class="action-btn primary" id="rsAddBtn">+ 离职申请</button>
+          </div>
+          <div id="rsPanelTip" class="reg-result" style="margin-bottom:8px"></div>
+          <table class="data-table"><thead><tr>
+            <th>申请编号</th><th>姓名</th><th>工号</th><th>部门</th><th>预计离职</th><th>离职原因</th><th>状态</th><th>操作</th>
+          </tr></thead><tbody id="rsListBody"><tr><td colspan="8" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div id="rsArchSection" style="display:none">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <input type="text" class="search-input" id="rsArchKeyword" placeholder="搜索归档姓名/工号..." />
+            <button class="action-btn" id="rsArchQueryBtn">查询归档</button>
+            <button class="action-btn" id="rsArchExportBtn" style="display:none">导出归档</button>
+          </div>
+          <table class="data-table"><thead><tr>
+            <th>归档编号</th><th>工号</th><th>姓名</th><th>部门</th><th>角色</th><th>入职</th><th>离职</th><th>原因</th><th>操作</th>
+          </tr></thead><tbody id="rsArchBody"><tr><td colspan="9" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="panel" id="panel-training">
+        <h2 class="panel-title">培训管理</h2>
+        <div class="module-stats" id="trStats">
+          <div class="module-stat-item"><span class="mstat-icon">&#128218;</span><div class="mstat-info"><div class="mstat-num" id="trStatCourses">0</div><div class="mstat-label">培训课程</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#127891;</span><div class="mstat-info"><div class="mstat-num" id="trStatEnroll">0</div><div class="mstat-label">参训人次</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#127885;</span><div class="mstat-info"><div class="mstat-num" id="trStatDone">0</div><div class="mstat-label">已完成</div></div></div>
+          <div class="module-stat-item" id="trStatNeedWrap" style="display:none"><span class="mstat-icon">&#128221;</span><div class="mstat-info"><div class="mstat-num" id="trStatNeed">0</div><div class="mstat-label">待汇总需求</div></div></div>
+        </div>
+        <div class="panel-toolbar" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+          <button type="button" class="action-btn primary active" id="trViewCourse">培训课程</button>
+          <button type="button" class="action-btn" id="trViewNeed">培训需求</button>
+          <button type="button" class="action-btn" id="trViewAtt" style="display:none">培训考勤</button>
+        </div>
+        <div id="trCourseSection">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <select class="search-input" id="trFilterStatus" style="max-width:120px"><option value="">全部状态</option><option value="报名中">报名中</option><option value="进行中">进行中</option><option value="已完成">已完成</option><option value="草稿">草稿</option></select>
+            <select class="search-input" id="trFilterType" style="max-width:120px"><option value="">全部类型</option><option value="内部培训">内部培训</option><option value="外部培训">外部培训</option><option value="技能提升">技能提升</option><option value="合规培训">合规培训</option></select>
+            <input type="text" class="search-input" id="trKeyword" placeholder="搜索课程/讲师..." />
+            <button class="action-btn" id="trQueryBtn">查询</button>
+            <button class="action-btn" id="trExportBtn" style="display:none">导出课程</button>
+            <button class="action-btn primary" id="trAddCourseBtn" style="display:none">+ 新建课程</button>
+            <button class="action-btn primary" id="trNeedBtn" style="display:none">+ 培训需求</button>
+          </div>
+          <div id="trPanelTip" class="reg-result" style="margin-bottom:8px"></div>
+          <table class="data-table"><thead><tr>
+            <th>课程编号</th><th>课程名称</th><th>培训类型</th><th>讲师</th><th>开始</th><th>结束</th><th>报名/名额</th><th>状态</th><th>操作</th>
+          </tr></thead><tbody id="trCourseBody"><tr><td colspan="9" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div id="trNeedSection" style="display:none">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <select class="search-input" id="trNeedStatus" style="max-width:120px"><option value="">全部</option><option value="待汇总">待汇总</option><option value="已汇总">已汇总</option></select>
+            <button class="action-btn" id="trNeedQueryBtn">查询需求</button>
+            <button class="action-btn" id="trSummarizeBtn" style="display:none">汇总选中</button>
+          </div>
+          <table class="data-table"><thead><tr>
+            <th id="trNeedChkTh" style="display:none;width:36px"><input type="checkbox" id="trNeedChkAll" /></th>
+            <th>需求编号</th><th>部门</th><th>主题</th><th>目标</th><th>人数</th><th>状态</th><th>提交时间</th>
+          </tr></thead><tbody id="trNeedBody"><tr><td colspan="8" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div id="trAttSection" style="display:none">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <input type="text" class="search-input" id="trAttKeyword" placeholder="搜索姓名/工号/课程..." />
+            <button class="action-btn" id="trAttQueryBtn">查询考勤</button>
+            <button class="action-btn" id="trAttExportBtn" style="display:none">导出考勤</button>
+          </div>
+          <table class="data-table"><thead><tr>
+            <th>考勤编号</th><th>课程</th><th>工号</th><th>姓名</th><th>部门</th><th>签到时间</th><th>状态</th>
+          </tr></thead><tbody id="trAttBody"><tr><td colspan="7" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="panel" id="panel-recruit">
+        <h2 class="panel-title">招聘管理</h2>
+        <div class="module-stats" id="rcStats">
+          <div class="module-stat-item"><span class="mstat-icon">&#128269;</span><div class="mstat-info"><div class="mstat-num" id="rcStatJobs">0</div><div class="mstat-label">招聘中职位</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#128203;</span><div class="mstat-info"><div class="mstat-num" id="rcStatResumes">0</div><div class="mstat-label">收到简历</div></div></div>
+          <div class="module-stat-item"><span class="mstat-icon">&#129309;</span><div class="mstat-info"><div class="mstat-num" id="rcStatHired">0</div><div class="mstat-label">本月录用</div></div></div>
+          <div class="module-stat-item" id="rcStatPendingWrap" style="display:none"><span class="mstat-icon">&#9203;</span><div class="mstat-info"><div class="mstat-num" id="rcStatPending">0</div><div class="mstat-label">待审批录用</div></div></div>
+        </div>
+        <div class="panel-toolbar" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+          <button type="button" class="action-btn primary active" id="rcViewJob">招聘岗位</button>
+          <button type="button" class="action-btn" id="rcViewResume">简历筛选</button>
+          <button type="button" class="action-btn" id="rcViewInterview">面试安排</button>
+          <button type="button" class="action-btn" id="rcViewHire">录用Offer</button>
+        </div>
+        <div id="rcJobSection">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <select class="search-input" id="rcJobStatus" style="max-width:120px"><option value="">全部状态</option><option value="招聘中">招聘中</option><option value="草稿">草稿</option><option value="已关闭">已关闭</option></select>
+            <select class="search-input" id="rcJobDept" style="max-width:130px"><option value="">全部部门</option></select>
+            <input type="text" class="search-input" id="rcJobKeyword" placeholder="搜索职位..." />
+            <button class="action-btn" id="rcJobQueryBtn">查询</button>
+            <button class="action-btn" id="rcJobExportBtn" style="display:none">导出岗位</button>
+            <button class="action-btn primary" id="rcAddJobBtn" style="display:none">+ 发布职位</button>
+          </div>
+          <div id="rcPanelTip" class="reg-result" style="margin-bottom:8px"></div>
+          <table class="data-table"><thead><tr>
+            <th>职位编号</th><th>招聘职位</th><th>部门</th><th>人数</th><th>截止</th><th>简历</th><th>状态</th><th>操作</th>
+          </tr></thead><tbody id="rcJobBody"><tr><td colspan="8" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div id="rcResumeSection" style="display:none">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <select class="search-input" id="rcResumeJob" style="max-width:160px"><option value="">全部岗位</option></select>
+            <select class="search-input" id="rcResumeStatus" style="max-width:120px"><option value="">全部状态</option><option value="待筛选">待筛选</option><option value="通过">通过</option><option value="未通过">未通过</option></select>
+            <input type="text" class="search-input" id="rcResumeKeyword" placeholder="姓名/手机/简历号..." />
+            <button class="action-btn" id="rcResumeQueryBtn">查询</button>
+            <button class="action-btn" id="rcResumeExportBtn" style="display:none">导出简历</button>
+            <button class="action-btn primary" id="rcAddResumeBtn" style="display:none">+ 录入简历</button>
+          </div>
+          <table class="data-table"><thead><tr>
+            <th>简历编号</th><th>姓名</th><th>应聘岗位</th><th>学历</th><th>期望薪资</th><th>状态</th><th>投递时间</th><th>操作</th>
+          </tr></thead><tbody id="rcResumeBody"><tr><td colspan="8" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div id="rcInterviewSection" style="display:none">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <button class="action-btn" id="rcInterviewQueryBtn">刷新</button>
+          </div>
+          <table class="data-table"><thead><tr>
+            <th>面试编号</th><th>候选人</th><th>岗位</th><th>面试官</th><th>时间</th><th>地点</th><th>状态</th><th>操作</th>
+          </tr></thead><tbody id="rcInterviewBody"><tr><td colspan="8" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div id="rcHireSection" style="display:none">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <button class="action-btn" id="rcHireQueryBtn">刷新审批</button>
+            <button class="action-btn" id="rcOfferQueryBtn">刷新Offer</button>
+            <button class="action-btn" id="rcPendingHireBtn" style="display:none">待我审批</button>
+          </div>
+          <h3 style="font-size:14px;margin:12px 0 8px">录用审批</h3>
+          <table class="data-table"><thead><tr>
+            <th>审批编号</th><th>候选人</th><th>岗位</th><th>拟薪资</th><th>状态</th><th>操作</th>
+          </tr></thead><tbody id="rcHireBody"><tr><td colspan="6" style="text-align:center">加载中...</td></tr></tbody></table>
+          <h3 style="font-size:14px;margin:16px 0 8px">Offer 管理</h3>
+          <table class="data-table"><thead><tr>
+            <th>Offer编号</th><th>候选人</th><th>岗位</th><th>薪资</th><th>入职日</th><th>确认状态</th><th>操作</th>
+          </tr></thead><tbody id="rcOfferBody"><tr><td colspan="7" style="text-align:center">加载中...</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-mine">
+        <h2 class="panel-title">我的</h2>
+        <div class="mine-layout">
+          <div class="mine-card" id="mineInfoCard">
+            <div class="mine-avatar" id="mineAvatar">&#128100;</div>
+            <div class="mine-info-list" id="mineInfoList"><div class="mine-loading">加载中...</div></div>
+            <button class="settings-btn" id="btnEditProfile" style="margin-top:12px;display:none">编辑个人信息</button>
+          </div>
+          <div class="mine-right">
+            <div class="mine-section">
+              <div class="mine-section-title">&#128273; 修改密码</div>
+              <form id="changePwdForm" class="reg-form">
+                <div class="reg-row"><label>当前账号 <span class="req">*</span></label><input type="text" id="cpwdUsername" placeholder="请输入您的账号" required /></div>
+                <div class="reg-row"><label>原始密码 <span class="req">*</span></label><input type="password" id="cpwdOld" placeholder="请输入原始密码" required /></div>
+                <div class="reg-row"><label>新密码 <span class="req">*</span></label><input type="password" id="cpwdNew" placeholder="请输入新密码（至少4位）" required /></div>
+                <div class="reg-row"><label>确认新密码 <span class="req">*</span></label><input type="password" id="cpwdConfirm" placeholder="请再次输入新密码" required /></div>
+                <div id="cpwdResult" class="reg-result"></div>
+                <button type="submit" class="settings-btn" style="margin-top:10px">确认修改密码</button>
+              </form>
+            </div>
+            <div class="mine-section">
+              <div class="mine-section-title">&#128100; 修改账号</div>
+              <form id="changeUserForm" class="reg-form">
+                <div class="reg-row"><label>当前账号 <span class="req">*</span></label><input type="text" id="cuserOld" placeholder="请输入当前账号" required /></div>
+                <div class="reg-row"><label>当前密码 <span class="req">*</span></label><input type="password" id="cuserPwd" placeholder="请输入当前密码验证身份" required /></div>
+                <div class="reg-row"><label>新账号 <span class="req">*</span></label><input type="text" id="cuserNew" placeholder="仅限字母、数字、下划线（至少3位）" required /></div>
+                <div id="cuserResult" class="reg-result"></div>
+                <button type="submit" class="settings-btn" style="margin-top:10px">确认修改账号</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <!-- 考勤记录 -->
+        <div class="mine-section-full">
+          <div class="mine-section-title">&#128197; 考勤记录</div>
+          <div id="mineAttTable"><div class="mine-loading">加载中...</div></div>
+        </div>
+        <!-- 请假记录 -->
+        <div class="mine-section-full">
+          <div class="mine-section-title">&#127796; 请假记录</div>
+          <div id="mineLvTable"><div class="mine-loading">加载中...</div></div>
+        </div>
+        <!-- 转正申请 P2 -->
+        <div class="mine-section-full" id="probationSection" style="display:none">
+          <div class="mine-section-title">&#128221; 转正申请</div>
+          <form id="probationForm" class="reg-form" style="max-width:600px">
+            <div class="reg-row"><label>工作总结</label><textarea id="probWorkSummary" rows="3" placeholder="请填写试用期工作总结"></textarea></div>
+            <div class="reg-row"><label>自我评价</label><textarea id="probSelfEval" rows="2" placeholder="请填写自我评价"></textarea></div>
+            <div id="probResult" class="reg-result"></div>
+            <button type="submit" class="settings-btn">提交转正申请</button>
+          </form>
+          <div id="probNotifyList" style="margin-top:16px"></div>
+        </div>
+        <!-- 转正审批（部门主管） -->
+        <div class="mine-section-full" id="probationApproveSection" style="display:none">
+          <div class="mine-section-title">&#9989; 转正审批（待办）</div>
+          <div id="probPendingList"><div class="mine-loading">加载中...</div></div>
+        </div>
+      </div>
+      <div class="panel" id="panel-settings">
+        <h2 class="panel-title">系统设置</h2>
+        <div class="settings-list">
+          <div class="settings-item"><div class="settings-label">当前账号</div><div class="settings-value" id="settingsUser"></div></div>
+          <div class="settings-item"><div class="settings-label">账号角色</div><div class="settings-value">管理员</div></div>
+          <div class="settings-item"><div class="settings-label">系统版本</div><div class="settings-value">v1.0.0</div></div>
+          <div class="settings-item">
+            <div class="settings-label">&#10133; 新员工注册</div>
+            <div class="settings-value"><button class="settings-btn" onclick="openRegisterModal()">注册新员工</button></div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+  <!-- 弹窗：补录/编辑考勤 K4 -->
+  <div class="modal-overlay" id="modalAttForm">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title" id="attFormTitle">&#10133; 补录考勤</span><button class="modal-close" onclick="closeModal('modalAttForm')">&times;</button></div>
+      <div class="modal-body">
+        <form id="attForm" class="reg-form">
+          <input type="hidden" id="attFormId" />
+          <div class="reg-row"><label>工号 <span class="req">*</span></label><input type="text" id="attFormEmpId" placeholder="如 E002" required /></div>
+          <div class="reg-row"><label>日期 <span class="req">*</span></label><input type="date" id="attFormDate" required /></div>
+          <div class="reg-row"><label>签到时间</label><input type="time" id="attFormCheckIn" step="1" /></div>
+          <div class="reg-row"><label>签退时间</label><input type="time" id="attFormCheckOut" step="1" /></div>
+          <div class="reg-row"><label>状态</label>
+            <select id="attFormStatus"><option value="">自动判定</option><option value="正常">正常</option><option value="迟到">迟到</option><option value="早退">早退</option><option value="缺勤">缺勤</option><option value="请假">请假</option></select>
+          </div>
+          <div class="reg-row"><label>备注</label><input type="text" id="attFormRemark" placeholder="可选" /></div>
+          <div id="attFormResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">保存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalEmployees">
+    <div class="modal-box modal-large">
+      <div class="modal-header"><span class="modal-title">&#128101; 全体员工信息</span><button class="modal-close" onclick="closeModal('modalEmployees')">&times;</button></div>
+      <div class="modal-search"><input type="text" id="empSearchInput" placeholder="搜索姓名/工号/部门/角色..." oninput="filterEmployeeTable()" /></div>
+      <div class="modal-body"><table class="data-table"><thead><tr><th>工号</th><th>姓名</th><th>性别</th><th>部门</th><th>角色</th><th>电话</th></tr></thead><tbody id="empModalBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalDepartments">
+    <div class="modal-box modal-large">
+      <div class="modal-header"><span class="modal-title">&#127970; 部门及员工信息</span><button class="modal-close" onclick="closeModal('modalDepartments')">&times;</button></div>
+      <div class="modal-body" id="deptModalBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalRegister">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#10133; 新员工注册</span><button class="modal-close" onclick="closeModal('modalRegister')">&times;</button></div>
+      <div class="modal-body">
+        <form id="registerForm" class="reg-form">
+          <div class="reg-row"><label>姓名 <span class="req">*</span></label><input type="text" id="regName" placeholder="请输入员工姓名" required /></div>
+          <div class="reg-row"><label>性别</label><select id="regGender"><option value="男">男</option><option value="女">女</option></select></div>
+          <div class="reg-row"><label>所属部门</label><select id="regDept"></select></div>
+          <div class="reg-row"><label>角色 <span class="req">*</span></label><select id="regRole" required></select></div>
+          <div id="regRoleHint" class="reg-result" style="font-size:12px;font-weight:normal;color:#c0392b;display:none"></div>
+          <div class="reg-row"><label>电话</label><input type="text" id="regPhone" placeholder="请输入电话号码" /></div>
+          <div class="reg-row"><label>入职日期 <span class="req">*</span></label><input type="date" id="regHireDate" required /></div>
+          <div id="regResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px;letter-spacing:2px;font-size:15px">确认注册</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：新增/编辑部门 -->
+  <div class="modal-overlay" id="modalDeptForm">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title" id="deptFormTitle">&#10133; 新增部门</span><button class="modal-close" onclick="closeModal('modalDeptForm')">&times;</button></div>
+      <div class="modal-body">
+        <form id="deptForm" class="reg-form">
+          <input type="hidden" id="deptFormId" />
+          <div class="reg-row"><label>部门名称 <span class="req">*</span></label><input type="text" id="deptFormName" required placeholder="请输入部门名称" /></div>
+          <div class="reg-row"><label>部门负责人</label><select id="deptFormManager"><option value="">暂不指定</option></select></div>
+          <div id="deptManagerHint" class="reg-result" style="font-size:12px;font-weight:normal;color:#666"></div>
+          <div id="deptFormResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">保存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：编辑个人信息 P1 -->
+  <div class="modal-overlay" id="modalEditProfile">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#9998; 编辑个人信息</span><button class="modal-close" onclick="closeModal('modalEditProfile')">&times;</button></div>
+      <div class="modal-body">
+        <form id="editProfileForm" class="reg-form">
+          <div class="reg-row"><label>姓名</label><input type="text" id="epName" required /></div>
+          <div class="reg-row"><label>联系电话</label><input type="text" id="epPhone" /></div>
+          <div class="reg-row"><label>电子邮箱</label><input type="email" id="epEmail" /></div>
+          <div class="reg-row"><label>现居地址</label><input type="text" id="epAddress" /></div>
+          <div class="reg-row"><label>紧急联系人</label><input type="text" id="epEmergency" /></div>
+          <div class="reg-row"><label>紧急联系电话</label><input type="text" id="epEmergencyPhone" /></div>
+          <div id="epResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">保存修改</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：员工状态变更 P3 -->
+  <div class="modal-overlay" id="modalStatusChange">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#128260; 员工状态变更</span><button class="modal-close" onclick="closeModal('modalStatusChange')">&times;</button></div>
+      <div class="modal-body">
+        <form id="statusChangeForm" class="reg-form">
+          <input type="hidden" id="scEmpId" />
+          <div class="reg-row"><label>员工</label><input type="text" id="scEmpName" readonly /></div>
+          <div class="reg-row"><label>新状态</label>
+            <select id="scNewStatus"><option value="在职">在职</option><option value="试用期">试用期</option><option value="已离职">已离职</option></select>
+          </div>
+          <div class="reg-row"><label>变更原因</label><input type="text" id="scReason" placeholder="请填写变更原因" /></div>
+          <div id="scResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">确认变更</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：发布岗位 P1 -->
+  <div class="modal-overlay" id="modalRecruitJob">
+    <div class="modal-box modal-large">
+      <div class="modal-header"><span class="modal-title" id="rcJobModalTitle">&#128269; 发布职位</span><button class="modal-close" onclick="closeModal('modalRecruitJob')">&times;</button></div>
+      <div class="modal-body">
+        <form id="rcJobForm" class="reg-form">
+          <input type="hidden" id="rcJobEditId" />
+          <div class="reg-row"><label>职位名称 <span class="req">*</span></label><input type="text" id="rcJobTitle" required /></div>
+          <div class="reg-row"><label>所属部门 <span class="req">*</span></label><select id="rcJobDeptSel" required></select></div>
+          <div class="reg-row"><label>招聘人数</label><input type="number" id="rcJobHeadcount" min="1" value="1" /></div>
+          <div class="reg-row"><label>薪资范围</label><input type="text" id="rcJobSalary" placeholder="如 8K-12K" /></div>
+          <div class="reg-row"><label>工作地点</label><input type="text" id="rcJobLocation" /></div>
+          <div class="reg-row"><label>截止日期</label><input type="date" id="rcJobDeadline" /></div>
+          <div class="reg-row"><label>岗位职责</label><textarea id="rcJobDuties" rows="2"></textarea></div>
+          <div class="reg-row"><label>任职要求</label><textarea id="rcJobReqs" rows="2"></textarea></div>
+          <div id="rcJobResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">保存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalRecruitResume">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#128203; 录入/投递简历</span><button class="modal-close" onclick="closeModal('modalRecruitResume')">&times;</button></div>
+      <div class="modal-body">
+        <form id="rcResumeForm" class="reg-form">
+          <div class="reg-row"><label>应聘岗位 <span class="req">*</span></label><select id="rcResumeJobSel" required></select></div>
+          <div class="reg-row"><label>姓名 <span class="req">*</span></label><input type="text" id="rcResumeName" required /></div>
+          <div class="reg-row"><label>手机</label><input type="text" id="rcResumePhone" /></div>
+          <div class="reg-row"><label>邮箱</label><input type="email" id="rcResumeEmail" /></div>
+          <div class="reg-row"><label>学历</label><input type="text" id="rcResumeEdu" /></div>
+          <div class="reg-row"><label>期望薪资</label><input type="text" id="rcResumeSalary" /></div>
+          <div class="reg-row"><label>工作经历</label><textarea id="rcResumeWork" rows="2"></textarea></div>
+          <div id="rcResumeResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">提交简历</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalRecruitInterview">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#128197; 安排面试</span><button class="modal-close" onclick="closeModal('modalRecruitInterview')">&times;</button></div>
+      <div class="modal-body">
+        <form id="rcInterviewForm" class="reg-form">
+          <input type="hidden" id="rcIvResumeId" />
+          <div class="reg-row"><label>面试轮次</label><input type="number" id="rcIvRound" min="1" value="1" /></div>
+          <div class="reg-row"><label>面试时间 <span class="req">*</span></label><input type="datetime-local" id="rcIvTime" required /></div>
+          <div class="reg-row"><label>面试地点</label><input type="text" id="rcIvLocation" /></div>
+          <div class="reg-row"><label>面试官工号</label><input type="text" id="rcIvInterviewer" placeholder="如 E002" /></div>
+          <div id="rcIvResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">确认安排</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：培训需求 1.1 -->
+  <div class="modal-overlay" id="modalTrainingNeed">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#128221; 发起培训需求</span><button class="modal-close" onclick="closeModal('modalTrainingNeed')">&times;</button></div>
+      <div class="modal-body">
+        <form id="trNeedForm" class="reg-form">
+          <div class="reg-row"><label>培训主题 <span class="req">*</span></label><input type="text" id="trNeedTheme" required /></div>
+          <div class="reg-row"><label>培训目标</label><textarea id="trNeedGoal" rows="2"></textarea></div>
+          <div class="reg-row"><label>预计人数</label><input type="number" id="trNeedHeadcount" min="1" value="10" /></div>
+          <div id="trNeedResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">提交需求</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：培训课程 1.2 -->
+  <div class="modal-overlay" id="modalTrainingCourse">
+    <div class="modal-box modal-large">
+      <div class="modal-header"><span class="modal-title" id="trCourseModalTitle">&#128218; 培训课程</span><button class="modal-close" onclick="closeModal('modalTrainingCourse')">&times;</button></div>
+      <div class="modal-body">
+        <form id="trCourseForm" class="reg-form">
+          <input type="hidden" id="trCourseEditId" />
+          <div class="reg-row"><label>课程名称 <span class="req">*</span></label><input type="text" id="trCourseTitle" required /></div>
+          <div class="reg-row"><label>培训类型</label><select id="trCourseType"><option>内部培训</option><option>外部培训</option><option>技能提升</option><option>合规培训</option></select></div>
+          <div class="reg-row"><label>讲师</label><input type="text" id="trCourseTrainer" /></div>
+          <div class="reg-row"><label>开始日期 <span class="req">*</span></label><input type="date" id="trCourseStart" required /></div>
+          <div class="reg-row"><label>结束日期 <span class="req">*</span></label><input type="date" id="trCourseEnd" required /></div>
+          <div class="reg-row"><label>地点</label><input type="text" id="trCourseLocation" /></div>
+          <div class="reg-row"><label>名额上限</label><input type="number" id="trCourseCapacity" min="1" value="50" /></div>
+          <div class="reg-row"><label>培训内容</label><textarea id="trCourseContent" rows="2"></textarea></div>
+          <div class="reg-row"><label>公告说明</label><textarea id="trCourseNotice" rows="2"></textarea></div>
+          <div id="trCourseResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px" id="trCourseSaveBtn">保存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：课程详情 -->
+  <div class="modal-overlay" id="modalTrainingDetail">
+    <div class="modal-box modal-large">
+      <div class="modal-header"><span class="modal-title">&#128218; 课程详情</span><button class="modal-close" onclick="closeModal('modalTrainingDetail')">&times;</button></div>
+      <div class="modal-body" id="trDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- 弹窗：离职申请 P1 -->
+  <div class="modal-overlay" id="modalResignApply">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#128682; 离职申请</span><button class="modal-close" onclick="closeModal('modalResignApply')">&times;</button></div>
+      <div class="modal-body">
+        <form id="rsApplyForm" class="reg-form">
+          <div class="reg-row"><label>预计离职日期 <span class="req">*</span></label><input type="date" id="rsApplyDate" required /></div>
+          <div class="reg-row"><label>离职原因 <span class="req">*</span></label><input type="text" id="rsApplyReason" placeholder="请简要说明离职原因" required /></div>
+          <div class="reg-row"><label>工作交接计划</label><textarea id="rsApplyHandover" rows="3" placeholder="交接事项、接手人等"></textarea></div>
+          <div id="rsApplyResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">提交申请</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：离职归档详情 D4 -->
+  <div class="modal-overlay" id="modalArchiveDetail">
+    <div class="modal-box modal-large">
+      <div class="modal-header"><span class="modal-title">&#128194; 离职档案详情</span><button class="modal-close" onclick="closeModal('modalArchiveDetail')">&times;</button></div>
+      <div class="modal-body" id="archiveDetailBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalChangePwd">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#128273; 修改密码</span><button class="modal-close" onclick="closeModal('modalChangePwd')">&times;</button></div>
+      <div class="modal-body">
+        <form id="changePwdForm" class="reg-form">
+          <div class="reg-row"><label>当前账号 <span class="req">*</span></label><input type="text" id="cpwdUsername" placeholder="请输入您的账号" required /></div>
+          <div class="reg-row"><label>原始密码 <span class="req">*</span></label><input type="password" id="cpwdOld" placeholder="请输入原始密码" required /></div>
+          <div class="reg-row"><label>新密码 <span class="req">*</span></label><input type="password" id="cpwdNew" placeholder="请输入新密码（至少4位）" required /></div>
+          <div class="reg-row"><label>确认新密码 <span class="req">*</span></label><input type="password" id="cpwdConfirm" placeholder="请再次输入新密码" required /></div>
+          <div id="cpwdResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">确认修改密码</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：修改账号 -->
+  <div class="modal-overlay" id="modalChangeUser">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#128100; 修改账号</span><button class="modal-close" onclick="closeModal('modalChangeUser')">&times;</button></div>
+      <div class="modal-body">
+        <form id="changeUserForm" class="reg-form">
+          <div class="reg-row"><label>当前账号 <span class="req">*</span></label><input type="text" id="cuserOld" placeholder="请输入当前账号" required /></div>
+          <div class="reg-row"><label>当前密码 <span class="req">*</span></label><input type="password" id="cuserPwd" placeholder="请输入当前密码验证身份" required /></div>
+          <div class="reg-row"><label>新账号 <span class="req">*</span></label><input type="text" id="cuserNew" placeholder="仅限字母、数字、下划线（至少3位）" required /></div>
+          <div id="cuserResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">确认修改账号</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：请假申请 J1 -->
+  <div class="modal-overlay" id="modalLeaveApply">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#127796; 请假申请</span><button class="modal-close" onclick="closeModal('modalLeaveApply')">&times;</button></div>
+      <div class="modal-body">
+        <form id="lvApplyForm" class="reg-form">
+          <div class="reg-row"><label>假期类型 <span class="req">*</span></label>
+            <select id="lvApplyType" required><option value="年假">年假</option><option value="病假">病假</option><option value="事假">事假</option><option value="婚假">婚假</option><option value="产假">产假</option><option value="丧假">丧假</option><option value="调休">调休</option></select>
+          </div>
+          <div class="reg-row"><label>开始日期 <span class="req">*</span></label><input type="date" id="lvApplyStart" required /></div>
+          <div class="reg-row"><label>结束日期 <span class="req">*</span></label><input type="date" id="lvApplyEnd" required /></div>
+          <div class="reg-row"><label>请假原因</label><input type="text" id="lvApplyReason" placeholder="请简要说明请假事由" /></div>
+          <div id="lvApplyResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">提交申请</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：薪资结构 X2 -->
+  <div class="modal-overlay" id="modalSalStruct">
+    <div class="modal-box modal-large">
+      <div class="modal-header"><span class="modal-title">&#128176; 员工薪资结构</span><button class="modal-close" onclick="closeModal('modalSalStruct')">&times;</button></div>
+      <div class="modal-search"><input type="text" id="salStructSearch" class="search-input" placeholder="搜索姓名/工号..." /></div>
+      <div class="modal-body" style="max-height:420px;overflow:auto">
+        <table class="data-table"><thead><tr>
+          <th>工号</th><th>姓名</th><th>部门</th><th>基本工资</th><th>绩效</th><th>津贴</th><th>社保公积金</th><th>操作</th>
+        </tr></thead><tbody id="salStructBody"><tr><td colspan="8" style="text-align:center">加载中...</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：编辑薪资结构 -->
+  <div class="modal-overlay" id="modalSalStructEdit">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#9998; 编辑薪资结构</span><button class="modal-close" onclick="closeModal('modalSalStructEdit')">&times;</button></div>
+      <div class="modal-body">
+        <form id="salStructForm" class="reg-form">
+          <input type="hidden" id="salStructEmpId" />
+          <div class="reg-row"><label>员工</label><input type="text" id="salStructEmpName" readonly /></div>
+          <div class="reg-row"><label>基本工资 <span class="req">*</span></label><input type="number" id="salStructBase" min="0" step="0.01" required /></div>
+          <div class="reg-row"><label>绩效奖金</label><input type="number" id="salStructBonus" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>岗位津贴</label><input type="number" id="salStructAllow" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>社保公积金</label><input type="number" id="salStructIns" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>生效日期</label><input type="date" id="salStructDate" /></div>
+          <div id="salStructResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px">保存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：工资单详情/编辑 X4 -->
+  <div class="modal-overlay" id="modalSalRecord">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title" id="salRecordTitle">&#128196; 工资单详情</span><button class="modal-close" onclick="closeModal('modalSalRecord')">&times;</button></div>
+      <div class="modal-body">
+        <form id="salRecordForm" class="reg-form">
+          <input type="hidden" id="salRecordId" />
+          <div class="reg-row"><label>工资单号</label><input type="text" id="salRecordPayId" readonly /></div>
+          <div class="reg-row"><label>员工</label><input type="text" id="salRecordEmp" readonly /></div>
+          <div class="reg-row"><label>发薪月份</label><input type="text" id="salRecordMonth" readonly /></div>
+          <div class="reg-row"><label>基本工资</label><input type="number" id="salRecordBase" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>绩效奖金</label><input type="number" id="salRecordBonus" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>岗位津贴</label><input type="number" id="salRecordAllow" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>加班补贴</label><input type="number" id="salRecordOt" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>考勤扣款</label><input type="number" id="salRecordDeduct" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>社保公积金</label><input type="number" id="salRecordIns" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>个人所得税</label><input type="number" id="salRecordTax" min="0" step="0.01" /></div>
+          <div class="reg-row"><label>状态</label><select id="salRecordStatus"><option value="草稿">草稿</option><option value="已发放">已发放</option></select></div>
+          <div class="reg-row"><label>备注</label><input type="text" id="salRecordRemark" /></div>
+          <div id="salRecordResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px" id="salRecordSaveBtn">保存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+  <script src="app.js"></script>
+  <script src="employee-module.js"></script>
+  <script src="attendance-module.js"></script>
+  <script src="salary-module.js"></script>
+  <script src="leave-module.js"></script>
+  <script src="resign-module.js"></script>
+  <script src="training-module.js"></script>
+  <script src="recruit-module.js"></script>
+</body>
+</html>
