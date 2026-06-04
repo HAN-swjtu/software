@@ -12,7 +12,7 @@ app.use(express.json({ limit: '2mb' }));
 // 数据库连接池（强制 utf8mb4，避免中文写入变成 ?）
 const pool = mysql.createPool({
   host: '127.0.0.1',
-  user: 'root',
+  user: 'hanxu',
   password: '123456',
   database: 'ems',
   charset: 'utf8mb4_unicode_ci',
