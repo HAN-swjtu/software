@@ -16,12 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
   bindChangeUserForm();
   const hireDateEl = document.getElementById('regHireDate');
   if (hireDateEl && !hireDateEl.value) hireDateEl.value = new Date().toISOString().slice(0, 10);
-  // 普通员工默认进入「我的」时加载
   if (document.getElementById('panel-mine') &&
       document.getElementById('panel-mine').classList.contains('active')) {
     loadMyProfile();
   }
-  // 预填账号
   const uname = sessionStorage.getItem('currentUsername') || '';
   if (uname) {
     const cpwd = document.getElementById('cpwdUsername');
@@ -73,9 +71,9 @@ async function showDeptModal() {
     const depts = await fetch(API+'/departments').then(r=>r.json());
     body.innerHTML = depts.map(d=>`
       <div class="dept-section">
-        <div class="dept-section-title">&#127970; ${d.name}<span class="dept-count">${d.employees.length} 人</span></div>
+        <div class="dept-section-title">🏢 ${d.name}<span class="dept-count">${d.employees.length} 人</span></div>
         <table class="data-table"><thead><tr><th>工号</th><th>姓名</th><th>性别</th><th>角色</th></tr></thead>
-        <tbody>${d.employees.map(e=>`<tr><td>${e.emp_id}</td><td>${e.name}</td><td>${e.gender}</td><td>${e.role||'-'}</td></tr>`).join('')}</tbody></table>
+        <tbody>${d.employees.map(e=>`<tr><td>${e.emp_id}</td><td>${e.name}</td><td>${e.gender}</td><td>${e.role||'-'}</td></tr>`).join('')}</tbody>
       </div>`).join('');
   } catch(e) { body.innerHTML='<div style="color:red;text-align:center">加载失败：'+e.message+'</div>'; }
 }
@@ -102,7 +100,6 @@ async function loadMyProfile() {
   try {
     const d = await fetch(API+'/my-profile?username='+encodeURIComponent(username)).then(r=>r.json());
     if (d.error) throw new Error(d.error);
-
     document.getElementById('mineAvatar').textContent = d.name ? d.name[0] : '?';
     document.getElementById('mineInfoList').innerHTML =
       [['姓名',d.name],['性别',d.gender],['账号',d.username],['工号',d.emp_id],
@@ -115,7 +112,6 @@ async function loadMyProfile() {
        ['试用期',d.probation_start ? d.probation_start+' ~ '+d.probation_end : '-'],
        ['部门主管',d.manager ? d.manager.name+'（'+d.manager.role+'）' : '-']]
       .map(([k,v])=>`<div class="mine-info-item"><span class="mine-info-label">${k}</span><span class="mine-info-val">${v}</span></div>`).join('');
-
     const SC = {'正常':'badge-success','迟到':'badge-warning','早退':'badge-warning','缺勤':'badge-danger','请假':'badge-info'};
     const attEl = document.getElementById('mineAttTable');
     attEl.innerHTML = d.attendance && d.attendance.length
@@ -123,7 +119,6 @@ async function loadMyProfile() {
          ${d.attendance.map(a=>`<tr><td>${a.check_date}</td><td><span class="badge ${SC[a.status]||'badge-info'}">${a.status}</span></td><td>${a.check_in||'-'}</td><td>${a.check_out||'-'}</td></tr>`).join('')}
          </tbody></table>`
       : '<div class="mine-empty">暂无考勤记录</div>';
-
     const LC = {'已批准':'badge-success','待审批':'badge-warning','已拒绝':'badge-danger'};
     const lvEl = document.getElementById('mineLvTable');
     lvEl.innerHTML = d.leaves && d.leaves.length
@@ -131,14 +126,13 @@ async function loadMyProfile() {
          ${d.leaves.map(l=>`<tr><td>${l.leave_type}</td><td>${l.start_date}</td><td>${l.end_date}</td><td>${l.days}</td><td>${l.reason||'-'}</td><td><span class="badge ${LC[l.status]||'badge-info'}">${l.status}</span></td></tr>`).join('')}
          </tbody></table>`
       : '<div class="mine-empty">暂无请假记录</div>';
-
     myProfileLoaded = true;
   } catch(e) {
     document.getElementById('mineInfoList').innerHTML = '<div class="mine-loading">加载失败：'+e.message+'</div>';
   }
 }
 
-// ============ 新员工注册 ============
+// ============ 新员工注册（增强校验） ============
 async function openRegisterModal() {
   openModal('modalRegister');
   try {
@@ -157,21 +151,107 @@ async function openRegisterModal() {
     onRole();
   } catch(e) { console.warn(e); }
 }
+
 function bindRegisterForm() {
-  const form=document.getElementById('registerForm'); if(!form) return;
+  const form = document.getElementById('registerForm');
+  if (!form) return;
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
-    const result=document.getElementById('regResult');
-    result.textContent='注册中...'; result.className='reg-result';
-    const body={name:document.getElementById('regName').value.trim(),gender:document.getElementById('regGender').value,
-      department_id:parseInt(document.getElementById('regDept').value),
-      role_id:parseInt(document.getElementById('regRole').value),phone:document.getElementById('regPhone').value.trim(),
-      hire_date:document.getElementById('regHireDate').value};
+    const resultDiv = document.getElementById('regResult');
+    resultDiv.textContent = '';
+    resultDiv.className = 'reg-result';
+
+    // ----- 1. 姓名校验（BUG-1,2,3）-----
+    const name = document.getElementById('regName').value.trim();
+    if (name === '') {
+      resultDiv.textContent = '姓名不能为空';
+      resultDiv.className = 'reg-result error';
+      return;
+    }
+    if (name.length > 20) {
+      resultDiv.textContent = '姓名不能超过20个字符';
+      resultDiv.className = 'reg-result error';
+      return;
+    }
+    const nameRegex = /^[a-zA-Z\u4e00-\u9fa5·\s]+$/;
+    if (!nameRegex.test(name)) {
+      resultDiv.textContent = '姓名只能包含汉字、字母、空格或中点(·)';
+      resultDiv.className = 'reg-result error';
+      return;
+    }
+
+    // ----- 2. 电话校验（BUG-5）-----
+    const phone = document.getElementById('regPhone').value.trim();
+    if (phone !== '' && !/^\d{11}$/.test(phone)) {
+      resultDiv.textContent = '电话必须为11位数字（如 13800138000）';
+      resultDiv.className = 'reg-result error';
+      return;
+    }
+
+    // ----- 3. 入职日期校验（BUG-4）-----
+    const hireDate = document.getElementById('regHireDate').value;
+    const today = new Date().toISOString().slice(0,10);
+    if (hireDate > today) {
+      resultDiv.textContent = '入职日期不能晚于今天';
+      resultDiv.className = 'reg-result error';
+      return;
+    }
+
+    // ----- 4. 部门主管唯一性校验（BUG-6）-----
+    const roleId = parseInt(document.getElementById('regRole').value, 10);
+    if (roleId === 2) { // 部门主管
+      const deptId = parseInt(document.getElementById('regDept').value, 10);
+      try {
+        const checkRes = await fetch(`${API}/departments/${deptId}/manager`);
+        if (checkRes.ok) {
+          const managerData = await checkRes.json();
+          if (managerData && managerData.manager_id) {
+            resultDiv.textContent = '该部门已有一名主管，不能重复设置部门主管';
+            resultDiv.className = 'reg-result error';
+            return;
+          }
+        } else if (checkRes.status === 404) {
+          // 接口不存在，忽略（后端最终会校验）
+        } else {
+          console.warn('主管唯一性预检失败', checkRes.status);
+        }
+      } catch (err) {
+        console.warn('主管唯一性预检出错', err);
+      }
+    }
+
+    // ----- 所有校验通过，提交注册 -----
+    resultDiv.textContent = '注册中...';
+    resultDiv.className = 'reg-result';
+    const body = {
+      name: name,
+      gender: document.getElementById('regGender').value,
+      department_id: parseInt(document.getElementById('regDept').value),
+      role_id: roleId,
+      phone: phone,
+      hire_date: hireDate
+    };
     try {
-      const data=await fetch(API+'/employees/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
-      if(data.success){result.textContent=data.message;result.className='reg-result success';form.reset();allEmployees=[];loadStats();}
-      else{result.textContent='注册失败：'+(data.error||'未知错误');result.className='reg-result error';}
-    } catch(err){result.textContent='请求失败：'+err.message;result.className='reg-result error';}
+      const data = await fetch(API+'/employees/register', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      }).then(r=>r.json());
+      if(data.success){
+        resultDiv.textContent = data.message;
+        resultDiv.className = 'reg-result success';
+        form.reset();
+        allEmployees = [];
+        loadStats();
+        setTimeout(() => closeModal('modalRegister'), 1500);
+      } else {
+        resultDiv.textContent = '注册失败：' + (data.error || '未知错误');
+        resultDiv.className = 'reg-result error';
+      }
+    } catch(err) {
+      resultDiv.textContent = '请求失败：' + err.message;
+      resultDiv.className = 'reg-result error';
+    }
   });
 }
 

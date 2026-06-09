@@ -162,9 +162,11 @@ function renderAttList(list) {
       <button class="row-btn" onclick="openAttEdit(${a.id},'${a.emp_id}','${a.check_date}','${(a.check_in||'').replace(/'/g,"\\'")}','${(a.check_out||'').replace(/'/g,"\\'")}','${a.status}','${(a.remark||'').replace(/'/g,"\\'")}')">编辑</button>
       <button class="row-btn danger" onclick="deleteAttRecord(${a.id},'${a.emp_id}','${a.check_date}')">删除</button>
     </td>` : '';
-    return `<tr><td>${a.emp_id}</td><td>${a.name}</td><td>${a.department || '-'}</td><td>${a.check_date}</td>
+    return `<tr>
+      <td>${a.emp_id}</td><td>${a.name}</td><td>${a.department || '-'}</td><td>${a.check_date}</td>
       <td><span class="badge ${badge}">${a.status}</span></td>
-      <td>${a.check_in || '-'}</td><td>${a.check_out || '-'}</td><td>${a.remark || '-'}</td>${act}</tr>`;
+      <td>${a.check_in || '-'}</td><td>${a.check_out || '-'}</td><td>${a.remark || '-'}</td>${act}
+    </tr>`;
   }).join('');
 }
 
@@ -345,6 +347,34 @@ async function submitAttForm(e) {
   const checkOut = document.getElementById('attFormCheckOut').value;
   const status = document.getElementById('attFormStatus').value;
   const remark = document.getElementById('attFormRemark').value.trim();
+
+  // ----- 新增前端校验（BUG-9,10,11）-----
+  // 1. 日期不能晚于今天
+  const today = new Date().toISOString().slice(0,10);
+  if (date > today) {
+    result.textContent = '不能补录未来的考勤日期';
+    result.className = 'reg-result error';
+    return;
+  }
+  // 2. 员工ID存在性校验（调用后端接口快速检查）
+  try {
+    const checkEmp = await fetch(`${ATT_API}/employees/${empId}`).then(r => r.json());
+    if (!checkEmp || !checkEmp.emp_id) {
+      result.textContent = '员工ID不存在，请检查';
+      result.className = 'reg-result error';
+      return;
+    }
+  } catch (err) {
+    // 如果后端没有单个查询接口，可以忽略（后端最终会校验）
+    console.warn('员工存在性预检失败', err);
+  }
+  // 3. 签退时间不能早于签到时间（如果两者都填写）
+  if (checkIn && checkOut && checkOut <= checkIn) {
+    result.textContent = '签退时间必须晚于签到时间';
+    result.className = 'reg-result error';
+    return;
+  }
+
   const body = {
     operator: attUser(),
     emp_id: empId,

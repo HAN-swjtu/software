@@ -34,7 +34,6 @@ async function fetchDeptManageList() {
   if (data.success === false) throw new Error(data.error || '请求失败');
   if (data.success && data.data) return data.data;
 
-  // 兼容旧后端：回退到 department-stats
   const fallback = await fetch(EMS_API + '/department-stats').then(r => r.json());
   return (fallback.data || []).map(d => ({
     id: d.department_id,
@@ -137,8 +136,10 @@ function renderEmpList(list) {
       <button class="row-btn" onclick="openStatusChange('${e.emp_id}','${e.name}','${e.emp_status}')">变更状态</button>
       <button class="row-btn danger" onclick="deleteEmployee('${e.emp_id}','${(e.name || '').replace(/'/g, "\\'")}')">删除</button>
     </td>` : '';
-    return `<tr><td>${e.emp_id}</td><td>${e.name}</td><td>${e.department || '-'}</td><td>${e.role || '-'}</td>
-      <td><span class="badge ${badge}">${e.emp_status || '在职'}</span></td><td>${formatHireDate(e)}</td>${act}</tr>`;
+    return `<tr>
+      <td>${e.emp_id}</td><td>${e.name}</td><td>${e.department || '-'}</td><td>${e.role || '-'}</td>
+      <td><span class="badge ${badge}">${e.emp_status || '在职'}</span></td><td>${formatHireDate(e)}</td>${act}
+    </tr>`;
   }).join('');
 }
 
@@ -444,7 +445,7 @@ async function queryDeptEmployees(deptId, keyword) {
   } catch (e) { el.innerHTML = '<div class="reg-result error">查询失败</div>'; }
 }
 
-// ========== P1 个人信息修改 ==========
+// ========== P1 个人信息修改（添加邮箱校验 BUG-7） ==========
 let profileData = null;
 
 function bindProfileEdit() {
@@ -455,6 +456,15 @@ function bindProfileEdit() {
     e.preventDefault();
     const result = document.getElementById('epResult');
     result.textContent = '保存中...';
+
+    // 邮箱格式校验（BUG-7）
+    const email = document.getElementById('epEmail').value.trim();
+    if (email !== '' && !/^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/.test(email)) {
+      result.textContent = '邮箱格式不正确，应包含 @ 和域名';
+      result.className = 'reg-result error';
+      return;
+    }
+
     try {
       const res = await fetch(EMS_API + '/profile/update', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -462,7 +472,7 @@ function bindProfileEdit() {
           username: emsUser(),
           name: document.getElementById('epName').value.trim(),
           phone: document.getElementById('epPhone').value.trim(),
-          email: document.getElementById('epEmail').value.trim(),
+          email: email,
           address: document.getElementById('epAddress').value.trim(),
           emergency_contact: document.getElementById('epEmergency').value.trim(),
           emergency_phone: document.getElementById('epEmergencyPhone').value.trim()
@@ -562,20 +572,37 @@ async function approveProbation(applyId, status) {
   } catch (e) { alert('审批失败'); }
 }
 
-// ========== P3 状态变更 ==========
+// ========== P3 状态变更（添加主管离职限制 BUG-8） ==========
 function bindStatusChange() {
   const form = document.getElementById('statusChangeForm');
   if (form) form.addEventListener('submit', async function (e) {
     e.preventDefault();
     const result = document.getElementById('scResult');
+    const empId = document.getElementById('scEmpId').value;
+    const newStatus = document.getElementById('scNewStatus').value;
+
+    // ----- 校验：如果是主管且要离职，阻止操作 -----
+    if (newStatus === '已离职') {
+      try {
+        const empInfo = await fetch(EMS_API + '/employees/' + empId).then(r => r.json());
+        if (empInfo && empInfo.role === '部门主管') {
+          result.textContent = '该员工是部门主管，请先解除主管职务再操作离职';
+          result.className = 'reg-result error';
+          return;
+        }
+      } catch (err) {
+        console.warn('主管校验失败', err);
+      }
+    }
+
     result.textContent = '处理中...';
     try {
       const res = await fetch(EMS_API + '/employee/status-change', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           operator: emsUser(),
-          emp_id: document.getElementById('scEmpId').value,
-          new_status: document.getElementById('scNewStatus').value,
+          emp_id: empId,
+          new_status: newStatus,
           reason: document.getElementById('scReason').value.trim()
         })
       }).then(r => r.json());
