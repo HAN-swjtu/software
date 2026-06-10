@@ -1,6 +1,6 @@
 # 员工管理系统
 
-本项目是《软件系统设计与应用》课程设计的员工管理系统，采用前端静态页面、Node.js/Express 后端接口和 MySQL 数据库实现。系统包含员工、部门、考勤、薪资、假期、离职、培训、招聘等业务模块。
+本项目是《软件系统设计与应用》课程设计的员工管理系统，采用前端静态页面、Node.js/Express 后端接口和 MySQL 数据库实现。系统包含员工、部门、考勤、薪资、假期、离职、绩效、培训、招聘等业务模块。
 
 ## 项目结构
 
@@ -17,6 +17,7 @@
 ├─ salary-module.js              薪资管理前端逻辑
 ├─ leave-module.js               假期管理前端逻辑
 ├─ resign-module.js              离职管理前端逻辑
+├─ performance-module.js         绩效管理前端逻辑
 ├─ training-module.js            培训管理前端逻辑
 ├─ recruit-module.js             招聘管理前端逻辑
 ├─ ems_database.sql              基础数据库脚本
@@ -27,9 +28,11 @@
    ├─ dept-migrate.sql           部门模块数据库脚本
    ├─ leave-migrate.sql          假期模块数据库脚本
    ├─ salary-migrate.sql         薪资模块数据库脚本
+   ├─ performance-migrate.sql    绩效模块数据库脚本
    ├─ training-migrate.sql       培训模块数据库脚本
    ├─ recruit-migrate.sql        招聘模块数据库脚本
    ├─ resign-migrate.sql         离职模块数据库脚本
+   ├─ performance-apis.js        绩效管理后端接口
    ├─ training-apis.js           培训管理后端接口
    ├─ recruit-apis.js            招聘管理后端接口
    └─ resign-apis.js             离职管理后端接口
@@ -59,11 +62,14 @@ mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\migrate.
 mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\dept-migrate.sql
 mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\leave-migrate.sql
 mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\salary-migrate.sql
+mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\performance-migrate.sql
 mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\training-migrate.sql
 mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\recruit-migrate.sql
 mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\resign-migrate.sql
 mysql -u你的用户名 -p --default-character-set=utf8mb4 ems < server\remove-position.sql
 ```
+
+说明：后端启动时也会检查并初始化绩效管理相关表；如果已经启动过后端，一般不需要重复导入 `server\performance-migrate.sql`。手动导入适合全新数据库或需要确认表结构时使用。
 
 如果需要修复或补充演示数据，可在 `server` 目录运行对应脚本，例如：
 
@@ -137,6 +143,33 @@ D:\员工管理项目\login.html
 | 普通员工 | `zhaotao` | `admin` | 个人业务、培训报名 |
 
 如果重新导入数据库后账号数据发生变化，以 `employees` 表中的用户名和密码为准。
+
+## 绩效管理模块
+
+绩效管理模块已接入主菜单和后端 API，相关文件如下：
+
+```text
+performance-module.js
+server/performance-apis.js
+server/performance-migrate.sql
+```
+
+主要流程：
+
+1. HR 专员配置 KPI 指标库，保存草稿并发布考核周期。
+2. 普通员工进入“绩效管理”填写本周期自评。
+3. 部门主管查看下属自评，提交主管评分、绩效等级、面谈记录和改进建议。
+4. HR 专员对主管已评记录进行归档。
+5. 招聘专员可查询已归档绩效记录，用作招聘参考。
+
+角色权限：
+
+| 角色 | 绩效管理权限 |
+| --- | --- |
+| HR专员 / root | 指标库配置、发布、归档、查询 |
+| 部门主管 | 查看下属记录、主管评分与面谈 |
+| 普通员工 | 查看 KPI、提交自评、查看本人结果 |
+| 招聘专员 | 查询已归档绩效记录 |
 
 ## 小组协作建议
 
