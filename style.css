@@ -549,6 +549,21 @@ body {
   background: rgba(224,82,82,0.22);
 }
 
+.action-btn.danger {
+  background: rgba(224,82,82,0.10);
+  color: var(--danger);
+  border-color: rgba(224,82,82,0.35);
+}
+
+.action-btn.danger:hover {
+  background: rgba(224,82,82,0.18);
+}
+
+.action-btn.danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* 设置列表 */
 .settings-list {
   background: var(--card-bg);

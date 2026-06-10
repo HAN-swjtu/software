@@ -266,4 +266,7 @@ require('./leave-apis')(app, pool, send);
 require('./resign-apis')(app, pool, send);
 require('./training-apis')(app, pool, send);
 require('./recruit-apis')(app, pool, send);
-app.listen(PORT, () => console.log(`EMS API 运行中: http://localhost:${PORT}`));
+(async () => {
+  await require('./performance-apis')(app, pool, send);
+  app.listen(PORT, () => console.log(`EMS API 运行中: http://localhost:${PORT}`));
+})();

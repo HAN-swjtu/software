@@ -637,6 +637,7 @@ function onEmployeePanelShow(panel) {
   if (panel === 'attendance' && typeof onAttendancePanelShow === 'function') onAttendancePanelShow();
   if (panel === 'salary' && typeof onSalaryPanelShow === 'function') onSalaryPanelShow();
   if (panel === 'leave' && typeof onLeavePanelShow === 'function') onLeavePanelShow();
+  if (panel === 'performance' && typeof onPerformancePanelShow === 'function') onPerformancePanelShow();
   if (panel === 'training' && typeof onTrainingPanelShow === 'function') onTrainingPanelShow();
   if (panel === 'recruit' && typeof onRecruitPanelShow === 'function') onRecruitPanelShow();
   if (panel === 'mine') {

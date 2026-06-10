@@ -27,14 +27,14 @@ if (logoutBtn) {
 const PANEL_NAMES = {
   dashboard: '控制台', employees: '员工列表', departments: '部门管理',
   attendance: '考勤管理', salary: '薪资管理', leave: '假期管理',
-  resign: '离职管理', training: '培训管理', recruit: '招聘管理',
+  resign: '离职管理', performance: '绩效管理', training: '培训管理', recruit: '招聘管理',
   mine: '我的', settings: '系统设置'
 };
 const ROLE_PERMISSIONS = {
-  '普通员工': ['mine', 'employees', 'attendance', 'salary', 'leave', 'resign', 'training'],
-  '部门主管': ['dashboard', 'employees', 'departments', 'attendance', 'salary', 'leave', 'resign', 'training', 'recruit', 'mine'],
-  'HR专员': ['dashboard', 'employees', 'departments', 'attendance', 'salary', 'leave', 'resign', 'training', 'recruit', 'mine', 'settings'],
-  '招聘专员': ['dashboard', 'employees', 'attendance', 'salary', 'leave', 'recruit', 'mine', 'settings'],
+  '普通员工': ['mine', 'employees', 'attendance', 'salary', 'leave', 'resign', 'performance', 'training'],
+  '部门主管': ['dashboard', 'employees', 'departments', 'attendance', 'salary', 'leave', 'resign', 'performance', 'training', 'recruit', 'mine'],
+  'HR专员': ['dashboard', 'employees', 'departments', 'attendance', 'salary', 'leave', 'resign', 'performance', 'training', 'recruit', 'mine', 'settings'],
+  '招聘专员': ['dashboard', 'employees', 'attendance', 'salary', 'leave', 'performance', 'recruit', 'mine', 'settings'],
 };
 function canAccess(panel) {
   const allowed = ROLE_PERMISSIONS[currentRole];

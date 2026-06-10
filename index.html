@@ -27,6 +27,7 @@
         <div class="nav-item" data-panel="salary"><span class="nav-icon">&#128176;</span><span>薪资管理</span></div>
         <div class="nav-item" data-panel="leave"><span class="nav-icon">&#127796;</span><span>假期管理</span></div>
         <div class="nav-item" data-panel="resign"><span class="nav-icon">&#128682;</span><span>离职管理</span></div>
+        <div class="nav-item" data-panel="performance"><span class="nav-icon">&#127942;</span><span>绩效管理</span></div>
         <div class="nav-item" data-panel="training"><span class="nav-icon">&#128218;</span><span>培训管理</span></div>
         <div class="nav-item" data-panel="recruit"><span class="nav-icon">&#128269;</span><span>招聘管理</span></div>
         <div class="nav-item" data-panel="mine"><span class="nav-icon">&#128100;</span><span>我的</span></div>
@@ -212,6 +213,90 @@
           <table class="data-table"><thead><tr>
             <th>归档编号</th><th>工号</th><th>姓名</th><th>部门</th><th>角色</th><th>入职</th><th>离职</th><th>原因</th><th>操作</th>
           </tr></thead><tbody id="rsArchBody"><tr><td colspan="9" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="panel" id="panel-performance">
+        <h2 class="panel-title">绩效管理</h2>
+        <div class="module-stats" id="pfStats">
+          <div class="module-stat-item" data-pf-stat="tpl"><span class="mstat-icon">&#128203;</span><div class="mstat-info"><div class="mstat-num" id="pfStatTpl">0</div><div class="mstat-label">生效指标库</div></div></div>
+          <div class="module-stat-item" data-pf-stat="self"><span class="mstat-icon">&#9997;</span><div class="mstat-info"><div class="mstat-num" id="pfStatSelf">0</div><div class="mstat-label">待自评</div></div></div>
+          <div class="module-stat-item" data-pf-stat="mgr"><span class="mstat-icon">&#128100;</span><div class="mstat-info"><div class="mstat-num" id="pfStatMgr">0</div><div class="mstat-label">待主管评</div></div></div>
+          <div class="module-stat-item" data-pf-stat="done"><span class="mstat-icon">&#9878;</span><div class="mstat-info"><div class="mstat-num" id="pfStatCal">0</div><div class="mstat-label">主管已评</div></div></div>
+          <div class="module-stat-item" data-pf-stat="arch"><span class="mstat-icon">&#128451;</span><div class="mstat-info"><div class="mstat-num" id="pfStatArch">0</div><div class="mstat-label">已归档</div></div></div>
+        </div>
+        <div id="pfPanelTip" class="reg-result" style="margin:12px 0 8px"></div>
+        <div class="panel-toolbar" id="pfTabBar" style="gap:8px;flex-wrap:wrap;display:none">
+          <button type="button" class="action-btn" id="pfTabMgr" style="display:none">主管评分</button>
+          <button type="button" class="action-btn" id="pfTabSelf" style="display:none">我的自评</button>
+        </div>
+        <div id="pfSecHr" style="display:none">
+          <h3 class="panel-subtitle" style="margin:8px 0 12px;font-size:15px">考核指标配置与归档</h3>
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <select class="search-input" id="pfTemplateSelect" style="max-width:220px"><option value="">选择已保存模板</option></select>
+            <input type="hidden" id="pfTplId" />
+            <input type="text" class="search-input" id="pfTplName" placeholder="模板名称" style="max-width:160px" />
+            <input type="text" class="search-input" id="pfTplCycle" placeholder="考核周期如2026-Q1" value="2026-Q1" style="max-width:150px" />
+            <button class="action-btn" id="pfTplNewBtn">新建模板</button>
+            <button class="action-btn" id="pfTplSaveBtn">保存草稿</button>
+            <button class="action-btn danger" id="pfTplDeleteBtn" title="删除下拉框中选中的草稿">删除草稿</button>
+            <button class="action-btn" id="pfTplUnlockBtn" title="将已锁定指标库恢复为可再次评分">取消锁定</button>
+            <button class="action-btn primary" id="pfTplPublishBtn">发布指标库</button>
+            <label style="margin-left:4px;font-size:13px;color:#666"><input type="checkbox" id="pfTplReplace" /> 替换该周期已发布指标库</label>
+          </div>
+          <div id="pfTplResult" class="reg-result" style="margin-bottom:8px"></div>
+          <table class="data-table"><thead><tr>
+            <th>指标名称</th><th>权重(%)</th><th>适用岗位</th><th>考核标准</th><th>操作</th>
+          </tr></thead><tbody id="pfIndicatorBody"></tbody></table>
+          <button class="action-btn" id="pfAddIndicatorBtn" style="margin-top:8px">+ 添加指标</button>
+          <div class="panel-toolbar em-toolbar" style="margin-top:20px">
+            <input type="text" class="search-input" id="pfArchCycle" placeholder="归档周期" value="2026-Q1" style="max-width:150px" />
+            <button class="action-btn primary" id="pfArchiveBtn">绩效结果归档</button>
+          </div>
+          <div id="pfArchResult" class="reg-result"></div>
+        </div>
+        <div id="pfSecMgr" style="display:none">
+          <h3 class="panel-subtitle" style="margin:8px 0 12px;font-size:15px">下属绩效评分</h3>
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <button class="action-btn" id="pfMgrRefreshBtn">刷新待评列表</button>
+          </div>
+          <table class="data-table"><thead><tr>
+            <th>记录编号</th><th>姓名</th><th>工号</th><th>周期</th><th>状态</th><th>自评分</th><th>操作</th>
+          </tr></thead><tbody id="pfMgrBody"><tr><td colspan="7" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div id="pfSecSelf" style="display:none">
+          <h3 class="panel-subtitle" style="margin:8px 0 12px;font-size:15px">我的绩效自评</h3>
+          <div id="pfNotifyBox" class="reg-result success" style="margin:12px 0"></div>
+          <input type="hidden" id="pfSelfRecordId" />
+          <div class="att-punch-card" id="pfSelfKpiCard" style="margin-bottom:12px">
+            <div class="att-punch-title">本周期 KPI 考核指标</div>
+            <div id="pfSelfTplMeta" style="font-size:13px;color:#666;margin:4px 0 10px">加载中...</div>
+            <table class="data-table"><thead><tr>
+              <th>指标名称</th><th>权重(%)</th><th>适用岗位</th><th>考核标准</th>
+            </tr></thead><tbody id="pfSelfKpiBody"><tr><td colspan="4" style="text-align:center;padding:16px">加载中...</td></tr></tbody></table>
+          </div>
+          <div class="att-punch-card" id="pfSelfFormCard">
+            <div class="att-punch-title">本周期自评（<span id="pfSelfCycle">-</span>）</div>
+            <div class="reg-row"><label>关键任务清单</label><textarea id="pfSelfTasks" class="search-input" rows="3" placeholder="对照 KPI 指标填写完成情况"></textarea></div>
+            <div class="reg-row"><label>自评得分(0-100)</label><input type="number" id="pfSelfScore" class="search-input" min="0" max="100" step="0.1" /></div>
+            <div class="reg-row"><label>个人总结</label><textarea id="pfSelfSummary" class="search-input" rows="3" placeholder="真实反映本周期工作成果"></textarea></div>
+            <button class="action-btn primary" id="pfSelfSubmitBtn">提交自评报告</button>
+            <div id="pfSelfResult" class="reg-result"></div>
+          </div>
+          <table class="data-table" style="margin-top:16px"><thead><tr>
+            <th>记录编号</th><th>周期</th><th>状态</th><th>自评分</th><th>等级</th><th>绩效系数</th>
+          </tr></thead><tbody id="pfSelfBody"><tr><td colspan="6" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div style="margin-top:20px">
+          <h3 style="font-size:15px;margin-bottom:8px">绩效记录查询</h3>
+          <div class="panel-toolbar em-toolbar">
+            <input type="text" class="search-input" id="pfFilterCycle" placeholder="周期" style="max-width:120px" />
+            <select class="search-input" id="pfFilterStatus" style="max-width:130px"><option value="">全部状态</option><option value="待自评">待自评</option><option value="待主管评">待主管评</option><option value="已冻结">主管已评</option><option value="已归档">已归档</option></select>
+            <input type="text" class="search-input" id="pfKeyword" placeholder="搜索姓名/工号..." />
+            <button class="action-btn" id="pfQueryBtn">查询</button>
+          </div>
+          <table class="data-table"><thead><tr>
+            <th>记录编号</th><th>姓名</th><th>工号</th><th>周期</th><th>状态</th><th>自评分</th><th>等级</th><th>系数</th>
+          </tr></thead><tbody id="pfListBody"><tr><td colspan="8" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
         </div>
       </div>
       <div class="panel" id="panel-training">
@@ -728,6 +813,23 @@
     </div>
   </div>
 
+  <!-- 弹窗：主管绩效评分与面谈 -->
+  <div class="modal-overlay" id="modalPfMgrReview">
+    <div class="modal-box">
+      <div class="modal-header"><span class="modal-title">&#128221; 主管绩效评分与面谈</span><button class="modal-close" onclick="closeModal('modalPfMgrReview')">&times;</button></div>
+      <div class="modal-body">
+        <input type="hidden" id="pfMgrRecordId" />
+        <div class="reg-row"><label>员工</label><span id="pfMgrEmpName" style="font-weight:600"></span></div>
+        <div class="reg-row"><label>主管评分(0-100)</label><input type="number" id="pfMgrScore" class="search-input" min="0" max="100" step="0.1" /></div>
+        <div class="reg-row"><label>绩效等级</label><select id="pfMgrGrade" class="search-input"><option value="A">A</option><option value="B" selected>B</option><option value="C">C</option><option value="D">D</option></select></div>
+        <div class="reg-row"><label>面谈记录</label><textarea id="pfMgrInterview" class="search-input" rows="3" placeholder="面谈反馈记录"></textarea></div>
+        <div class="reg-row"><label>改进建议</label><textarea id="pfMgrImprove" class="search-input" rows="2" placeholder="绩效改进建议"></textarea></div>
+        <div id="pfMgrResult" class="reg-result"></div>
+        <button type="button" class="login-btn" style="margin-top:12px" id="pfMgrSubmitBtn" onclick="submitPfMgrReview()">提交绩效评价</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 弹窗：工资单详情/编辑 X4 -->
   <div class="modal-overlay" id="modalSalRecord">
     <div class="modal-box">
@@ -761,6 +863,7 @@
   <script src="salary-module.js"></script>
   <script src="leave-module.js"></script>
   <script src="resign-module.js"></script>
+  <script src="performance-module.js"></script>
   <script src="training-module.js"></script>
   <script src="recruit-module.js"></script>
 </body>
