@@ -64,8 +64,8 @@
         </div>
         <div id="empReportInfo" class="reg-result" style="margin-bottom:10px"></div>
         <table class="data-table"><thead><tr>
-          <th>工号</th><th>姓名</th><th>部门</th><th>角色</th><th>状态</th><th>入职日期</th><th id="empActionCol" style="display:none">操作</th>
-        </tr></thead><tbody id="empListBody"><tr><td colspan="7" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+          <th>工号</th><th>姓名</th><th>性别</th><th>电话</th><th>邮箱</th><th>部门</th><th>角色</th><th>状态</th><th>入职日期</th><th id="empActionCol" style="display:none">操作</th>
+        </tr></thead><tbody id="empListBody"><tr><td colspan="10" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
       </div>
       <div class="panel" id="panel-departments">
         <h2 class="panel-title">部门管理</h2>
@@ -156,6 +156,12 @@
           <div class="module-stat-item"><span class="mstat-icon">&#127796;</span><div class="mstat-info"><div class="mstat-num" id="lvStatMonth">0</div><div class="mstat-label">本月申请</div></div></div>
           <div class="module-stat-item"><span class="mstat-icon">&#9989;</span><div class="mstat-info"><div class="mstat-num" id="lvStatApproved">0</div><div class="mstat-label">已批准</div></div></div>
           <div class="module-stat-item"><span class="mstat-icon">&#9203;</span><div class="mstat-info"><div class="mstat-num" id="lvStatPending">0</div><div class="mstat-label">待审批</div></div></div>
+        </div>
+        <div class="dept-section" id="lvBalanceSection" style="margin-top:12px">
+          <div class="dept-section-title">假期余额与使用情况 <span class="dept-count" id="lvBalanceYear"></span></div>
+          <table class="data-table"><thead><tr>
+            <th>假期类型</th><th>年度额度</th><th>已使用</th><th>剩余额度</th>
+          </tr></thead><tbody id="lvBalanceBody"><tr><td colspan="4" style="text-align:center;padding:16px">加载中...</td></tr></tbody></table>
         </div>
         <div class="panel-toolbar em-toolbar" style="margin-top:16px">
           <select class="search-input" id="lvFilterType" style="max-width:110px"><option value="">全部类型</option><option value="年假">年假</option><option value="病假">病假</option><option value="事假">事假</option><option value="婚假">婚假</option><option value="产假">产假</option><option value="丧假">丧假</option><option value="调休">调休</option></select>
@@ -311,6 +317,7 @@
           <button type="button" class="action-btn primary active" id="trViewCourse">培训课程</button>
           <button type="button" class="action-btn" id="trViewNeed">培训需求</button>
           <button type="button" class="action-btn" id="trViewAtt" style="display:none">培训考勤</button>
+          <button type="button" class="action-btn" id="trViewResult" style="display:none">培训成果</button>
         </div>
         <div id="trCourseSection">
           <div class="panel-toolbar em-toolbar" style="margin-top:12px">
@@ -347,6 +354,16 @@
           <table class="data-table"><thead><tr>
             <th>考勤编号</th><th>课程</th><th>工号</th><th>姓名</th><th>部门</th><th>签到时间</th><th>状态</th>
           </tr></thead><tbody id="trAttBody"><tr><td colspan="7" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
+        </div>
+        <div id="trResultSection" style="display:none">
+          <div class="panel-toolbar em-toolbar" style="margin-top:12px">
+            <input type="text" class="search-input" id="trResultKeyword" placeholder="搜索姓名/工号/课程..." />
+            <select class="search-input" id="trResultStatus" style="max-width:120px"><option value="">全部成果</option><option value="待评定">待评定</option><option value="合格">合格</option><option value="优秀">优秀</option><option value="不合格">不合格</option></select>
+            <button class="action-btn" id="trResultQueryBtn">查询成果</button>
+          </div>
+          <table class="data-table"><thead><tr>
+            <th>课程</th><th>工号</th><th>姓名</th><th>部门</th><th>签到</th><th>成绩</th><th>成果状态</th><th>证书/材料</th><th>反馈</th><th>操作</th>
+          </tr></thead><tbody id="trResultBody"><tr><td colspan="10" style="text-align:center;padding:20px">加载中...</td></tr></tbody></table>
         </div>
       </div>
       <div class="panel" id="panel-recruit">
@@ -576,6 +593,32 @@
           <div class="reg-row"><label>紧急联系电话</label><input type="text" id="epEmergencyPhone" /></div>
           <div id="epResult" class="reg-result"></div>
           <button type="submit" class="login-btn" style="margin-top:12px">保存修改</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗：员工基本信息查看/编辑 -->
+  <div class="modal-overlay" id="modalEmpBasic">
+    <div class="modal-box modal-large">
+      <div class="modal-header"><span class="modal-title">&#128188; 员工基本信息</span><button class="modal-close" onclick="closeModal('modalEmpBasic')">&times;</button></div>
+      <div class="modal-body">
+        <form id="empBasicForm" class="reg-form">
+          <input type="hidden" id="ebEmpId" />
+          <div class="reg-row"><label>工号</label><input type="text" id="ebEmpCode" readonly /></div>
+          <div class="reg-row"><label>姓名 <span class="req">*</span></label><input type="text" id="ebName" required /></div>
+          <div class="reg-row"><label>性别</label><select id="ebGender"><option>男</option><option>女</option></select></div>
+          <div class="reg-row"><label>联系电话</label><input type="text" id="ebPhone" /></div>
+          <div class="reg-row"><label>电子邮箱</label><input type="email" id="ebEmail" /></div>
+          <div class="reg-row"><label>现居地址</label><input type="text" id="ebAddress" /></div>
+          <div class="reg-row"><label>紧急联系人</label><input type="text" id="ebEmergency" /></div>
+          <div class="reg-row"><label>紧急联系电话</label><input type="text" id="ebEmergencyPhone" /></div>
+          <div class="reg-row"><label>部门</label><select id="ebDepartment"></select></div>
+          <div class="reg-row"><label>角色</label><select id="ebRole"></select></div>
+          <div class="reg-row"><label>状态</label><select id="ebStatus"><option>在职</option><option>试用期</option><option>已离职</option></select></div>
+          <div class="reg-row"><label>入职日期</label><input type="text" id="ebHireDate" readonly /></div>
+          <div id="ebResult" class="reg-result"></div>
+          <button type="submit" class="login-btn" style="margin-top:12px" id="ebSaveBtn">保存信息</button>
         </form>
       </div>
     </div>

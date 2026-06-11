@@ -80,16 +80,28 @@ app.get('/api/stats', async (req, res) => {
 // ============ 所有员工 ============
 app.get('/api/employees', async (req, res) => {
   try {
+    const { operator } = req.query;
+    let where = '';
+    const params = [];
+    if (operator && operator !== 'root') {
+      const [[op]] = await pool.query('SELECT role_id, department_id FROM employees WHERE username=? LIMIT 1', [operator]);
+      if (op?.role_id === 2) {
+        where = 'WHERE e.department_id=?';
+        params.push(op.department_id);
+      }
+    }
     const [rows] = await pool.query(`
       SELECT e.emp_id, e.name, e.gender, e.phone, e.emp_status,
-             e.department_id, d.name as department, r.name as role, e.username,
+             e.email, e.address, e.emergency_contact, e.emergency_phone,
+             e.department_id, e.role_id, d.name as department, r.name as role, e.username,
              DATE_FORMAT(e.contract_start,'%Y-%m-%d') as hire_date,
              DATE_FORMAT(e.contract_start,'%Y-%m-%d') as created_at
       FROM employees e
       LEFT JOIN departments d ON e.department_id=d.id
       LEFT JOIN roles r ON e.role_id=r.id
+      ${where}
       ORDER BY e.emp_id
-    `);
+    `, params);
     send(res, rows);
   } catch(e) { res.status(500); send(res, { error: e.message }); }
 });

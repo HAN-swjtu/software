@@ -86,12 +86,38 @@ async function loadLeaveMySummary() {
     if (!res.success) { el.textContent = res.error || '加载失败'; return; }
     if (res.is_admin) {
       el.innerHTML = `管理员视图 · 全系统待审批 <strong>${res.pending_all || 0}</strong> 条（与控制台「待审假期」一致）`;
+      renderLeaveBalances([]);
       return;
     }
     el.innerHTML = `本年度已批准请假 <strong>${res.used_days_year || 0}</strong> 天 · 我的申请共 <strong>${(res.records || []).length}</strong> 条`;
+    renderLeaveBalances(res.balances || [], res.balance_year);
   } catch (e) {
     el.textContent = '加载失败，请确认后端已启动';
   }
+}
+
+function renderLeaveBalances(rows, year) {
+  const body = document.getElementById('lvBalanceBody');
+  const label = document.getElementById('lvBalanceYear');
+  const section = document.getElementById('lvBalanceSection');
+  if (!body) return;
+  if (label) label.textContent = year ? `${year}年度` : '';
+  if (!rows || !rows.length) {
+    if (section && lvUser() === 'root') section.style.display = 'none';
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px">暂无余额数据</td></tr>';
+    return;
+  }
+  if (section) section.style.display = '';
+  body.innerHTML = rows.map(r => {
+    const remaining = Number(r.remaining_days || 0);
+    const cls = remaining <= 0 ? 'badge-danger' : (remaining <= 2 ? 'badge-warning' : 'badge-success');
+    return `<tr>
+      <td>${r.leave_type}</td>
+      <td>${r.quota_days} 天</td>
+      <td>${r.used_days} 天</td>
+      <td><span class="badge ${cls}">${r.remaining_days} 天</span></td>
+    </tr>`;
+  }).join('');
 }
 
 async function loadLeaveList(extra) {

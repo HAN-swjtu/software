@@ -67,15 +67,18 @@ function initEmployeeModule() {
   bindProfileEdit();
   bindProbation();
   bindStatusChange();
+  bindEmpBasicForm();
 }
 
 function setupRoleUI() {
   if (isHR()) {
     const exp = document.getElementById('empExportBtn');
     const add = document.getElementById('empAddBtn');
-    const col = document.getElementById('empActionCol');
     if (exp) exp.style.display = '';
     if (add) add.style.display = '';
+  }
+  if (isManager()) {
+    const col = document.getElementById('empActionCol');
     if (col) col.style.display = '';
   }
   if (emsRole() === '普通员工' || emsRole() === '部门主管') {
@@ -112,35 +115,135 @@ let empListData = [];
 async function loadEmployeeList() {
   const tbody = document.getElementById('empListBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px">加载中...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px">加载中...</td></tr>';
   try {
-    const list = await fetch(EMS_API + '/employees').then(r => r.json());
+    const list = await fetch(EMS_API + '/employees?operator=' + encodeURIComponent(emsUser())).then(r => r.json());
     empListData = list;
     renderEmpList(list);
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="7" style="color:red;text-align:center">加载失败</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="color:red;text-align:center">加载失败</td></tr>';
   }
 }
 
 function renderEmpList(list) {
   const tbody = document.getElementById('empListBody');
-  const showAct = isHR();
-  const cols = showAct ? 7 : 6;
+  const showAct = isManager();
+  const cols = showAct ? 10 : 9;
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center">无数据</td></tr>`;
     return;
   }
   tbody.innerHTML = list.map(e => {
     const badge = STATUS_BADGE[e.emp_status] || 'badge-info';
-    const act = showAct ? `<td>
+    const viewBtn = `<button class="row-btn" onclick="openEmpBasic('${e.emp_id}')">资料</button>`;
+    const hrBtns = isHR() ? `
       <button class="row-btn" onclick="openStatusChange('${e.emp_id}','${e.name}','${e.emp_status}')">变更状态</button>
       <button class="row-btn danger" onclick="deleteEmployee('${e.emp_id}','${(e.name || '').replace(/'/g, "\\'")}')">删除</button>
-    </td>` : '';
+    ` : '';
+    const act = showAct ? `<td>${viewBtn}${hrBtns}</td>` : '';
     return `<tr>
-      <td>${e.emp_id}</td><td>${e.name}</td><td>${e.department || '-'}</td><td>${e.role || '-'}</td>
+      <td>${e.emp_id}</td><td>${e.name}</td><td>${e.gender || '-'}</td><td>${e.phone || '-'}</td><td>${e.email || '-'}</td>
+      <td>${e.department || '-'}</td><td>${e.role || '-'}</td>
       <td><span class="badge ${badge}">${e.emp_status || '在职'}</span></td><td>${formatHireDate(e)}</td>${act}
     </tr>`;
   }).join('');
+}
+
+async function fillEmpBasicOptions(deptId, roleId, editableFull) {
+  const deptSel = document.getElementById('ebDepartment');
+  const roleSel = document.getElementById('ebRole');
+  if (!deptSel || !roleSel) return;
+  const [depts, roles] = await Promise.all([
+    fetch(EMS_API + '/departments/list').then(r => r.json()),
+    fetch(EMS_API + '/roles').then(r => r.json())
+  ]);
+  deptSel.innerHTML = (depts || []).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+  roleSel.innerHTML = (roles || []).map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+  deptSel.value = deptId || '';
+  roleSel.value = roleId || '';
+  deptSel.disabled = !editableFull;
+  roleSel.disabled = !editableFull;
+}
+
+function setEmpBasicEditable(canEdit, editScope) {
+  ['ebName', 'ebGender', 'ebPhone', 'ebEmail', 'ebAddress', 'ebEmergency', 'ebEmergencyPhone'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !canEdit;
+  });
+  const status = document.getElementById('ebStatus');
+  if (status) status.disabled = editScope !== 'full';
+  const save = document.getElementById('ebSaveBtn');
+  if (save) save.style.display = canEdit ? '' : 'none';
+}
+
+async function openEmpBasic(empId) {
+  const result = document.getElementById('ebResult');
+  if (result) { result.textContent = '加载中...'; result.className = 'reg-result'; }
+  openModal('modalEmpBasic');
+  try {
+    const res = await fetch(EMS_API + '/employees/' + encodeURIComponent(empId) + '/detail?operator=' + encodeURIComponent(emsUser())).then(r => r.json());
+    if (!res.success) throw new Error(res.error || '加载失败');
+    const d = res.data;
+    document.getElementById('ebEmpId').value = d.emp_id || '';
+    document.getElementById('ebEmpCode').value = d.emp_id || '';
+    document.getElementById('ebName').value = d.name || '';
+    document.getElementById('ebGender').value = d.gender || '男';
+    document.getElementById('ebPhone').value = d.phone || '';
+    document.getElementById('ebEmail').value = d.email || '';
+    document.getElementById('ebAddress').value = d.address || '';
+    document.getElementById('ebEmergency').value = d.emergency_contact || '';
+    document.getElementById('ebEmergencyPhone').value = d.emergency_phone || '';
+    document.getElementById('ebStatus').value = d.emp_status || '在职';
+    document.getElementById('ebHireDate').value = formatHireDate({ hire_date: d.hire_date }) || '';
+    await fillEmpBasicOptions(d.department_id, d.role_id, res.edit_scope === 'full');
+    setEmpBasicEditable(res.can_edit, res.edit_scope);
+    if (result) {
+      result.textContent = res.can_edit ? '可维护该员工基本信息' : '仅可查看该员工基本信息';
+      result.className = 'reg-result success';
+    }
+  } catch (e) {
+    if (result) { result.textContent = e.message; result.className = 'reg-result error'; }
+  }
+}
+
+function bindEmpBasicForm() {
+  const form = document.getElementById('empBasicForm');
+  if (!form) return;
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const empId = document.getElementById('ebEmpId').value;
+    const result = document.getElementById('ebResult');
+    result.textContent = '保存中...';
+    result.className = 'reg-result';
+    try {
+      const res = await fetch(EMS_API + '/employees/' + encodeURIComponent(empId) + '/basic', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator: emsUser(),
+          name: document.getElementById('ebName').value.trim(),
+          gender: document.getElementById('ebGender').value,
+          phone: document.getElementById('ebPhone').value.trim(),
+          email: document.getElementById('ebEmail').value.trim(),
+          address: document.getElementById('ebAddress').value.trim(),
+          emergency_contact: document.getElementById('ebEmergency').value.trim(),
+          emergency_phone: document.getElementById('ebEmergencyPhone').value.trim(),
+          department_id: document.getElementById('ebDepartment').value,
+          role_id: document.getElementById('ebRole').value,
+          emp_status: document.getElementById('ebStatus').value
+        })
+      }).then(r => r.json());
+      result.textContent = res.message || res.error || '';
+      result.className = 'reg-result ' + (res.success ? 'success' : 'error');
+      if (res.success) {
+        loadEmployeeList();
+        loadDepartmentStats();
+      }
+    } catch (err) {
+      result.textContent = '保存失败';
+      result.className = 'reg-result error';
+    }
+  });
 }
 
 async function deleteEmployee(empId, name) {
@@ -359,7 +462,7 @@ async function openDeptForm(deptId) {
   document.getElementById('deptFormTitle').textContent = deptId ? '✎ 编辑部门' : '➕ 新增部门';
   const mgrSel = document.getElementById('deptFormManager');
   mgrSel.innerHTML = '<option value="">暂不指定</option>';
-  const emps = await fetch(EMS_API + '/employees').then(r => r.json());
+  const emps = await fetch(EMS_API + '/employees?operator=' + encodeURIComponent(emsUser())).then(r => r.json());
   const id = deptId ? parseInt(deptId, 10) : null;
   const candidates = id
     ? emps.filter(e => String(e.department_id) === String(id) && e.emp_status !== '已离职')
@@ -584,8 +687,8 @@ function bindStatusChange() {
     // ----- 校验：如果是主管且要离职，阻止操作 -----
     if (newStatus === '已离职') {
       try {
-        const empInfo = await fetch(EMS_API + '/employees/' + empId).then(r => r.json());
-        if (empInfo && empInfo.role === '部门主管') {
+        const empInfo = await fetch(EMS_API + '/employees/' + empId + '/detail?operator=' + encodeURIComponent(emsUser())).then(r => r.json());
+        if (empInfo?.data && empInfo.data.role === '部门主管') {
           result.textContent = '该员工是部门主管，请先解除主管职务再操作离职';
           result.className = 'reg-result error';
           return;

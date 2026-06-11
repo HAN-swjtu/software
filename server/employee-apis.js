@@ -44,6 +44,7 @@ module.exports = function (app, pool, send) {
       birth_date: e.birth_date, id_card: e.id_card, phone: e.phone,
       email: e.email, address: e.address,
       emergency_contact: e.emergency_contact, emergency_phone: e.emergency_phone,
+      department_id: e.department_id, role_id: e.role_id,
       department: e.department, role: e.role,
       emp_status: e.emp_status,
       hire_date: e.contract_start || e.created_at,
@@ -202,6 +203,79 @@ module.exports = function (app, pool, send) {
       const [rows] = await pool.query(sql, params);
       await logOp(username, emp?.emp_id || '', '部门员工查询', `部门ID:${deptId}`);
       send(res, { success: true, data: rows, query_time: new Date() });
+    } catch (e) { res.status(500); send(res, { error: e.message }); }
+  });
+
+  async function canAccessEmployeeDetail(operator, target) {
+    if (operator === 'root') return { ok: true, can_edit: true, operator: null };
+    const op = await getEmployee(operator);
+    if (!op) return { ok: false, error: '操作人不存在' };
+    const isAdminOrHR = [1, 3].includes(op.role_id);
+    const isDeptManager = op.role_id === 2 && op.department_id === target.department_id;
+    if (!isAdminOrHR && !isDeptManager && op.emp_id !== target.emp_id) {
+      return { ok: false, error: '无权查看该员工信息' };
+    }
+    return { ok: true, can_edit: isAdminOrHR || isDeptManager, operator: op, admin: isAdminOrHR, manager: isDeptManager };
+  }
+
+  app.get('/api/employees/:emp_id/detail', async (req, res) => {
+    try {
+      const { operator } = req.query;
+      const { emp_id } = req.params;
+      const [[target]] = await pool.query(`
+        SELECT e.*, d.name AS department, r.name AS role
+        FROM employees e
+        LEFT JOIN departments d ON e.department_id=d.id
+        LEFT JOIN roles r ON e.role_id=r.id
+        WHERE e.emp_id=? LIMIT 1`, [emp_id]);
+      if (!target) return send(res, { success: false, error: '员工不存在' });
+      const auth = await canAccessEmployeeDetail(operator, target);
+      if (!auth.ok) return send(res, { success: false, error: auth.error });
+      await logOp(operator || '', emp_id, '员工基本信息查看', target.name);
+      send(res, { success: true, data: empDetailRow(target), can_edit: auth.can_edit, edit_scope: auth.admin ? 'full' : (auth.manager ? 'contact' : 'self') });
+    } catch (e) { res.status(500); send(res, { error: e.message }); }
+  });
+
+  app.put('/api/employees/:emp_id/basic', async (req, res) => {
+    try {
+      const { operator, name, gender, phone, email, address, emergency_contact, emergency_phone, department_id, role_id, emp_status } = req.body;
+      const { emp_id } = req.params;
+      const [[target]] = await pool.query('SELECT * FROM employees WHERE emp_id=? LIMIT 1', [emp_id]);
+      if (!target) return send(res, { success: false, error: '员工不存在' });
+      const auth = await canAccessEmployeeDetail(operator, target);
+      if (!auth.ok || !auth.can_edit) return send(res, { success: false, error: '无权编辑该员工信息' });
+
+      const updates = {
+        name: name || target.name,
+        gender: gender || target.gender,
+        phone: phone ?? target.phone,
+        email: email ?? target.email,
+        address: address ?? target.address,
+        emergency_contact: emergency_contact ?? target.emergency_contact,
+        emergency_phone: emergency_phone ?? target.emergency_phone,
+        department_id: target.department_id,
+        role_id: target.role_id,
+        emp_status: target.emp_status
+      };
+
+      if (auth.admin) {
+        if (department_id) updates.department_id = parseInt(department_id, 10);
+        if (role_id) updates.role_id = parseInt(role_id, 10);
+        if (emp_status) updates.emp_status = emp_status;
+      }
+
+      await pool.query(`
+        UPDATE employees
+        SET name=?, gender=?, phone=?, email=?, address=?, emergency_contact=?, emergency_phone=?,
+            department_id=?, role_id=?, emp_status=?, status_changed_at=IF(?<>?, NOW(), status_changed_at)
+        WHERE emp_id=?`,
+        [updates.name, updates.gender, updates.phone, updates.email, updates.address,
+         updates.emergency_contact, updates.emergency_phone, updates.department_id, updates.role_id,
+         updates.emp_status, target.emp_status, updates.emp_status, emp_id]);
+
+      await refreshDeptStats();
+      await logOp(operator || '', emp_id, '员工基本信息编辑', target.name);
+      send(res, { success: true, message: '员工基本信息已保存' });
     } catch (e) { res.status(500); send(res, { error: e.message }); }
   });
 
@@ -377,7 +451,7 @@ module.exports = function (app, pool, send) {
       const { operator, department_id, role_id, emp_status, hire_from, hire_to, sort_by, sort_order } = req.body;
       let sql = `
         SELECT e.emp_id, e.name, d.name AS department, r.name AS role, e.emp_status,
-               DATE_FORMAT(e.contract_start,'%Y-%m-%d') AS hire_date, e.phone, e.gender
+               DATE_FORMAT(e.contract_start,'%Y-%m-%d') AS hire_date, e.phone, e.email, e.gender
         FROM employees e
         LEFT JOIN departments d ON e.department_id=d.id
         LEFT JOIN roles r ON e.role_id=r.id
@@ -409,7 +483,7 @@ module.exports = function (app, pool, send) {
       const { operator, format, department_id, role_id, emp_status, hire_from, hire_to } = req.body;
       let sql = `
         SELECT e.emp_id, e.name, d.name AS department, r.name AS role, e.emp_status,
-               DATE_FORMAT(e.contract_start,'%Y-%m-%d') AS hire_date
+               DATE_FORMAT(e.contract_start,'%Y-%m-%d') AS hire_date, e.phone, e.email
         FROM employees e
         LEFT JOIN departments d ON e.department_id=d.id
         LEFT JOIN roles r ON e.role_id=r.id
@@ -428,16 +502,16 @@ module.exports = function (app, pool, send) {
         [operator || '', JSON.stringify(req.body), format || 'Excel', rows.length]);
 
       if (format === 'PDF') {
-        const text = rows.map(r => `${r.emp_id}\t${r.name}\t${r.department}\t${r.role}\t${r.emp_status}\t${r.hire_date}`).join('\n');
+        const text = rows.map(r => `${r.emp_id}\t${r.name}\t${r.department}\t${r.role}\t${r.emp_status}\t${r.hire_date}\t${r.phone || ''}\t${r.email || ''}`).join('\n');
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename=employees.txt');
         return res.end('员工信息导出(PDF简化版)\n' + text);
       }
       const BOM = '\uFEFF';
-      const header = '工号,姓名,部门,角色,状态,入职日期\n';
+      const header = '工号,姓名,部门,角色,状态,入职日期,电话,邮箱\n';
       const csv = BOM + header + rows.map(r => {
         const hire = r.hire_date ? String(r.hire_date).slice(0, 10) : '';
-        return [r.emp_id, r.name, r.department, r.role, r.emp_status, hire]
+        return [r.emp_id, r.name, r.department, r.role, r.emp_status, hire, r.phone, r.email]
           .map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',');
       }).join('\n');
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');

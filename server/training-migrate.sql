@@ -61,3 +61,22 @@ CREATE TABLE IF NOT EXISTS training_attendance (
   UNIQUE KEY uk_course_emp_att (course_id, emp_id),
   KEY idx_course (course_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS training_results (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  result_id VARCHAR(20) NOT NULL UNIQUE COMMENT '培训成果编号 TRxxxx',
+  course_id VARCHAR(20) NOT NULL,
+  emp_id VARCHAR(10) NOT NULL,
+  name VARCHAR(30) DEFAULT '',
+  result_status VARCHAR(20) DEFAULT '待评定' COMMENT '待评定/合格/不合格/优秀',
+  score DECIMAL(5,2) DEFAULT NULL COMMENT '考核成绩',
+  certificate VARCHAR(100) DEFAULT '' COMMENT '证书或成果材料',
+  feedback VARCHAR(500) DEFAULT '' COMMENT '培训反馈与成果说明',
+  evaluator VARCHAR(30) DEFAULT '',
+  evaluated_at DATETIME NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_course_emp_result (course_id, emp_id),
+  KEY idx_course (course_id),
+  KEY idx_emp (emp_id),
+  KEY idx_status (result_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

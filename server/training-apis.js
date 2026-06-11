@@ -155,7 +155,29 @@ module.exports = function (app, pool, send) {
     return false;
   }
 
-  ensureTrainingSchema();
+  async function ensureTrainingResultSchema() {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS training_results (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        result_id VARCHAR(20) NOT NULL UNIQUE,
+        course_id VARCHAR(20) NOT NULL,
+        emp_id VARCHAR(10) NOT NULL,
+        name VARCHAR(30) DEFAULT '',
+        result_status VARCHAR(20) DEFAULT '待评定',
+        score DECIMAL(5,2) DEFAULT NULL,
+        certificate VARCHAR(100) DEFAULT '',
+        feedback VARCHAR(500) DEFAULT '',
+        evaluator VARCHAR(30) DEFAULT '',
+        evaluated_at DATETIME NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_course_emp_result (course_id, emp_id),
+        KEY idx_course (course_id),
+        KEY idx_emp (emp_id),
+        KEY idx_status (result_status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  }
+
+  ensureTrainingSchema().then(() => ensureTrainingResultSchema()).catch(() => {});
 
   // ========== 1.1 培训需求（部门主管提交 / HR 汇总） ==========
   app.post('/api/training/need', async (req, res) => {
@@ -506,11 +528,12 @@ module.exports = function (app, pool, send) {
 
       let sql = `
         SELECT a.*, c.title AS course_title, c.start_date, c.end_date,
-          e.department AS emp_department,
+          d.name AS emp_department,
           en.status AS enroll_status
         FROM training_attendance a
         JOIN training_courses c ON a.course_id=c.course_id
         JOIN employees e ON a.emp_id=e.emp_id
+        LEFT JOIN departments d ON e.department_id=d.id
         LEFT JOIN training_enrollments en ON en.course_id=a.course_id AND en.emp_id=a.emp_id
         WHERE 1=1`;
       const params = [];
@@ -568,6 +591,109 @@ module.exports = function (app, pool, send) {
   });
 
   // ========== 统计与导出 ==========
+  app.post('/api/training/result/query', async (req, res) => {
+    try {
+      await ensureTrainingResultSchema();
+      const { operator, course_id, keyword, result_status } = req.body;
+      const emp = await getEmployee(operator);
+      const admin = isHR(emp, operator) || operator === 'root';
+      const manager = isManager(emp);
+      if (!admin && !manager && !emp) {
+        return send(res, { success: false, error: '用户不存在' });
+      }
+
+      let sql = `
+        SELECT en.course_id, c.title AS course_title, en.emp_id, en.name,
+               d.name AS department, en.status AS enroll_status,
+               a.check_status, a.check_time,
+               r.result_id, r.result_status, r.score, r.certificate, r.feedback,
+               r.evaluator, r.evaluated_at
+        FROM training_enrollments en
+        JOIN training_courses c ON en.course_id=c.course_id
+        JOIN employees e ON en.emp_id=e.emp_id
+        LEFT JOIN departments d ON e.department_id=d.id
+        LEFT JOIN training_attendance a ON a.course_id=en.course_id AND a.emp_id=en.emp_id
+        LEFT JOIN training_results r ON r.course_id=en.course_id AND r.emp_id=en.emp_id
+        WHERE en.status='已报名'`;
+      const params = [];
+      if (admin) {
+        // HR/root can view all training outcomes.
+      } else if (manager) {
+        sql += ' AND e.department_id=?';
+        params.push(emp.department_id);
+      } else {
+        sql += ' AND en.emp_id=?';
+        params.push(emp.emp_id);
+      }
+      if (course_id) { sql += ' AND en.course_id=?'; params.push(course_id); }
+      if (result_status) { sql += ' AND COALESCE(r.result_status, ?) = ?'; params.push('待评定', result_status); }
+      if (keyword) {
+        sql += ' AND (en.name LIKE ? OR en.emp_id LIKE ? OR c.title LIKE ?)';
+        params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+      }
+      sql += ' ORDER BY c.start_date DESC, en.emp_id LIMIT 500';
+      const [rows] = await pool.query(sql, params);
+      send(res, { success: true, data: rows.map(r => ({
+        course_id: r.course_id,
+        course_title: r.course_title,
+        emp_id: r.emp_id,
+        name: r.name,
+        department: r.department || '',
+        enroll_status: r.enroll_status || '',
+        check_status: r.check_status || '未签到',
+        check_time: r.check_time,
+        result_id: r.result_id || '',
+        result_status: r.result_status || '待评定',
+        score: r.score,
+        certificate: r.certificate || '',
+        feedback: r.feedback || '',
+        evaluator: r.evaluator || '',
+        evaluated_at: r.evaluated_at
+      })) });
+    } catch (e) { res.status(500); send(res, { error: e.message }); }
+  });
+
+  app.post('/api/training/result/save', async (req, res) => {
+    try {
+      await ensureTrainingResultSchema();
+      const { operator, course_id, emp_id, result_status, score, certificate, feedback } = req.body;
+      const op = await getEmployee(operator);
+      if (!isHR(op, operator) && !isManager(op) && operator !== 'root') {
+        return send(res, { success: false, error: '无权维护培训成果' });
+      }
+      if (!course_id || !emp_id) return send(res, { success: false, error: '课程和员工不能为空' });
+      const [[enroll]] = await pool.query(`
+        SELECT en.*, e.department_id
+        FROM training_enrollments en
+        JOIN employees e ON en.emp_id=e.emp_id
+        WHERE en.course_id=? AND en.emp_id=? AND en.status='已报名' LIMIT 1`, [course_id, emp_id]);
+      if (!enroll) return send(res, { success: false, error: '该员工未报名该课程，不能登记成果' });
+      if (isManager(op) && !isHR(op, operator) && enroll.department_id !== op.department_id) {
+        return send(res, { success: false, error: '部门主管仅可维护本部门员工培训成果' });
+      }
+      if (!['待评定', '合格', '不合格', '优秀'].includes(result_status || '')) {
+        return send(res, { success: false, error: '成果状态无效' });
+      }
+      const scoreVal = score === '' || score == null ? null : Number(score);
+      if (scoreVal != null && (Number.isNaN(scoreVal) || scoreVal < 0 || scoreVal > 100)) {
+        return send(res, { success: false, error: '成绩必须在 0-100 之间' });
+      }
+      const [[ex]] = await pool.query('SELECT result_id FROM training_results WHERE course_id=? AND emp_id=?', [course_id, emp_id]);
+      const result_id = ex?.result_id || await nextId(pool, 'training_results', 'result_id', 'TR', 4);
+      await pool.query(`
+        INSERT INTO training_results
+          (result_id, course_id, emp_id, name, result_status, score, certificate, feedback, evaluator, evaluated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,NOW())
+        ON DUPLICATE KEY UPDATE
+          result_status=VALUES(result_status), score=VALUES(score), certificate=VALUES(certificate),
+          feedback=VALUES(feedback), evaluator=VALUES(evaluator), evaluated_at=NOW()`,
+        [result_id, course_id, emp_id, enroll.name || '', result_status, scoreVal,
+         certificate || '', feedback || '', op?.emp_id || operator || 'ADMIN']);
+      await logOp(operator || '', emp_id, '培训成果登记', `${course_id}:${result_status}`);
+      send(res, { success: true, result_id, message: '培训成果已保存' });
+    } catch (e) { res.status(500); send(res, { error: e.message }); }
+  });
+
   app.post('/api/training/summary', async (req, res) => {
     try {
       await refreshAllCourseStatus(pool);

@@ -3,6 +3,15 @@ const fs = require('fs');
 const path = require('path');
 
 const LEAVE_TYPES = ['年假', '病假', '事假', '婚假', '产假', '丧假', '调休'];
+const LEAVE_QUOTAS = {
+  '年假': 10,
+  '病假': 10,
+  '事假': 5,
+  '婚假': 3,
+  '产假': 98,
+  '丧假': 3,
+  '调休': 5
+};
 
 function calcDays(startDate, endDate) {
   const s = new Date(startDate);
@@ -59,6 +68,24 @@ module.exports = function (app, pool, send) {
 
   function canApprove(emp, username) {
     return isHR(emp, username) || isManager(emp);
+  }
+
+  async function buildLeaveBalances(empId, year = new Date().getFullYear()) {
+    const [rows] = await pool.query(`
+      SELECT leave_type, COALESCE(SUM(days),0) AS used_days
+      FROM leave_records
+      WHERE emp_id=? AND status='已批准' AND YEAR(start_date)=?
+      GROUP BY leave_type`, [empId, year]);
+    const usedMap = Object.fromEntries(rows.map(r => [r.leave_type, Number(r.used_days || 0)]));
+    return Object.entries(LEAVE_QUOTAS).map(([leave_type, quota_days]) => {
+      const used_days = usedMap[leave_type] || 0;
+      return {
+        leave_type,
+        quota_days,
+        used_days,
+        remaining_days: Math.max(quota_days - used_days, 0)
+      };
+    });
   }
 
   function leaveRow(r) {
@@ -171,6 +198,8 @@ module.exports = function (app, pool, send) {
       send(res, {
         success: true,
         used_days_year: Number(used.v),
+        balance_year: year,
+        balances: await buildLeaveBalances(emp.emp_id, year),
         records: rows.map(leaveRow)
       });
     } catch (e) { res.status(500); send(res, { error: e.message }); }

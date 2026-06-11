@@ -6,7 +6,8 @@ const TR_BADGE = {
   '草稿': 'badge-danger', '报名中': 'badge-info', '未开始': 'badge-info',
   '进行中': 'badge-warning', '已完成': 'badge-success',
   '待汇总': 'badge-warning', '已汇总': 'badge-success', '已立项': 'badge-info',
-  '已签到': 'badge-success', '迟到': 'badge-warning', '缺勤': 'badge-danger'
+  '已签到': 'badge-success', '迟到': 'badge-warning', '缺勤': 'badge-danger',
+  '待评定': 'badge-warning', '合格': 'badge-success', '优秀': 'badge-info', '不合格': 'badge-danger'
 };
 
 function trUser() { return sessionStorage.getItem('currentUsername') || ''; }
@@ -37,6 +38,8 @@ function setupTrainingUI() {
     const el = document.getElementById(id);
     if (el) el.style.display = trIsHR() ? '' : 'none';
   });
+  const resultBtn = document.getElementById('trViewResult');
+  if (resultBtn) resultBtn.style.display = (trIsHR() || trIsMgr()) ? '' : 'none';
   const needBtn = document.getElementById('trNeedBtn');
   if (needBtn) needBtn.style.display = (trIsMgr() || trIsHR()) && !isRoot ? '' : 'none';
   const needWrap = document.getElementById('trStatNeedWrap');
@@ -63,12 +66,15 @@ function setTrView(mode) {
   document.getElementById('trViewCourse')?.classList.toggle('active', mode === 'course');
   document.getElementById('trViewNeed')?.classList.toggle('active', mode === 'need');
   document.getElementById('trViewAtt')?.classList.toggle('active', mode === 'att');
+  document.getElementById('trViewResult')?.classList.toggle('active', mode === 'result');
   document.getElementById('trCourseSection').style.display = mode === 'course' ? '' : 'none';
   document.getElementById('trNeedSection').style.display = mode === 'need' ? '' : 'none';
   document.getElementById('trAttSection').style.display = mode === 'att' ? '' : 'none';
+  document.getElementById('trResultSection').style.display = mode === 'result' ? '' : 'none';
   if (mode === 'course') loadTrainingCourses();
   else if (mode === 'need') loadTrainingNeeds();
-  else loadTrainingAttendance();
+  else if (mode === 'att') loadTrainingAttendance();
+  else loadTrainingResults();
 }
 
 async function loadTrainingSummary() {
@@ -240,6 +246,77 @@ async function loadTrainingAttendance() {
   }
 }
 
+async function loadTrainingResults() {
+  const tbody = document.getElementById('trResultBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center">加载中...</td></tr>';
+  try {
+    const res = await fetch(TR_API + '/training/result/query', {
+      method: 'POST', headers: TR_JSON,
+      body: JSON.stringify({
+        operator: trUser(),
+        keyword: document.getElementById('trResultKeyword')?.value?.trim() || null,
+        result_status: document.getElementById('trResultStatus')?.value || null
+      })
+    }).then(r => r.json());
+    if (!res.success) {
+      tbody.innerHTML = `<tr><td colspan="10" style="color:red;text-align:center">${res.error || '加载失败'}</td></tr>`;
+      return;
+    }
+    const rows = res.data || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center">暂无培训成果记录</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const resultBadge = TR_BADGE[r.result_status] || 'badge-info';
+      const checkBadge = TR_BADGE[r.check_status] || 'badge-warning';
+      const canEdit = trIsHR() || trIsMgr();
+      return `<tr>
+        <td>${r.course_title}（${r.course_id}）</td>
+        <td>${r.emp_id}</td><td>${r.name}</td><td>${r.department || '-'}</td>
+        <td><span class="badge ${checkBadge}">${r.check_status || '未签到'}</span></td>
+        <td>${r.score ?? '-'}</td>
+        <td><span class="badge ${resultBadge}">${r.result_status || '待评定'}</span></td>
+        <td>${r.certificate || '-'}</td>
+        <td>${r.feedback || '-'}</td>
+        <td>${canEdit ? `<button class="row-btn" onclick="saveTrainingResult('${r.course_id}','${r.emp_id}','${(r.name || '').replace(/'/g, "\\'")}','${r.result_status || '待评定'}','${r.score ?? ''}','${(r.certificate || '').replace(/'/g, "\\'")}','${(r.feedback || '').replace(/'/g, "\\'")}')">登记成果</button>` : '-'}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="10" style="color:red;text-align:center">加载失败</td></tr>';
+  }
+}
+
+async function saveTrainingResult(courseId, empId, name, oldStatus, oldScore, oldCert, oldFeedback) {
+  const status = prompt(`请输入 ${name} 的培训成果状态（待评定/合格/优秀/不合格）`, oldStatus || '合格');
+  if (status == null) return;
+  const score = prompt('请输入培训考核成绩（0-100，可留空）', oldScore || '');
+  if (score == null) return;
+  const certificate = prompt('请输入证书或成果材料说明（可留空）', oldCert || '');
+  if (certificate == null) return;
+  const feedback = prompt('请输入培训反馈或成果说明（可留空）', oldFeedback || '');
+  if (feedback == null) return;
+  try {
+    const res = await fetch(TR_API + '/training/result/save', {
+      method: 'POST', headers: TR_JSON,
+      body: JSON.stringify({
+        operator: trUser(),
+        course_id: courseId,
+        emp_id: empId,
+        result_status: status.trim(),
+        score: score.trim(),
+        certificate: certificate.trim(),
+        feedback: feedback.trim()
+      })
+    }).then(r => r.json());
+    alert(res.message || res.error || '');
+    if (res.success) loadTrainingResults();
+  } catch (e) {
+    alert('保存失败：' + e.message);
+  }
+}
+
 async function showTrainingDetail(courseId) {
   const c = trCourseCache.find(x => x.course_id === courseId);
   if (!c) return;
@@ -375,9 +452,11 @@ function bindTrainingPanel() {
   document.getElementById('trViewCourse')?.addEventListener('click', () => setTrView('course'));
   document.getElementById('trViewNeed')?.addEventListener('click', () => setTrView('need'));
   document.getElementById('trViewAtt')?.addEventListener('click', () => setTrView('att'));
+  document.getElementById('trViewResult')?.addEventListener('click', () => setTrView('result'));
   document.getElementById('trQueryBtn')?.addEventListener('click', loadTrainingCourses);
   document.getElementById('trNeedQueryBtn')?.addEventListener('click', loadTrainingNeeds);
   document.getElementById('trAttQueryBtn')?.addEventListener('click', loadTrainingAttendance);
+  document.getElementById('trResultQueryBtn')?.addEventListener('click', loadTrainingResults);
   document.getElementById('trAddCourseBtn')?.addEventListener('click', () => openTrainingCourseModal());
   document.getElementById('trNeedBtn')?.addEventListener('click', openTrainingNeedModal);
   document.getElementById('trSummarizeBtn')?.addEventListener('click', summarizeTrainingNeeds);
